@@ -41,7 +41,8 @@ const CORNER_PROBE_MIN_LOOKAHEAD: float = 1.0
 const MAX_HP: int = 5
 
 @onready var collision_shape: CollisionShape2D = $CollisionShape2D
-@onready var combat: Node = get_node_or_null("Combat")
+# PlayerCombat is combat.gd's global class_name — no preload needed to type this.
+@onready var combat: PlayerCombat = get_node_or_null("Combat")
 
 var coyote_timer: float = 0.0
 var jump_buffer_timer: float = 0.0

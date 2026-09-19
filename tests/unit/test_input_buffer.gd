@@ -28,6 +28,7 @@ func test_no_press_is_not_buffered() -> void:
 func test_press_is_buffered_within_window() -> void:
 	var buffer := InputBuffer.new(&"__test_buffer_action")
 	_input.action_down(&"__test_buffer_action")
+	await get_tree().physics_frame  # "just pressed" only becomes visible on the next tick
 	buffer.poll()
 
 	var press_ms := buffer.last_press_ms()
@@ -39,6 +40,7 @@ func test_press_is_buffered_within_window() -> void:
 func test_press_falls_outside_window_once_it_expires() -> void:
 	var buffer := InputBuffer.new(&"__test_buffer_action")
 	_input.action_down(&"__test_buffer_action")
+	await get_tree().physics_frame
 	buffer.poll()
 
 	var press_ms := buffer.last_press_ms()
@@ -49,6 +51,7 @@ func test_press_falls_outside_window_once_it_expires() -> void:
 func test_consume_invalidates_the_buffered_press() -> void:
 	var buffer := InputBuffer.new(&"__test_buffer_action")
 	_input.action_down(&"__test_buffer_action")
+	await get_tree().physics_frame
 	buffer.poll()
 	buffer.consume()
 
