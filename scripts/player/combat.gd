@@ -165,15 +165,11 @@ func _close_strike_hitbox() -> void:
 func _apply_strike_hits() -> void:
 	if strike_hitbox == null:
 		return
-	var overlapping := strike_hitbox.get_overlapping_bodies()
-	var names := []
-	for b in overlapping:
-		names.append("%s(%s)@%s has_take_strike=%s" % [b.name, b.get_class(), b.global_position, b.has_method("take_strike")])
-	print("DIAG strike hitbox: monitoring=%s global_pos=%s overlapping=%s" % [
-		strike_hitbox.monitoring, strike_hitbox.global_position, names,
-	])
-	for body in overlapping:
-		if body in _struck_bodies:
+	for body in strike_hitbox.get_overlapping_bodies():
+		# The hitbox starts flush against the player's own collider edge, so
+		# collision margins can report it as touching/overlapping — never a
+		# real hit.
+		if body == player or body in _struck_bodies:
 			continue
 		_struck_bodies.append(body)
 		if body.has_method("take_strike"):

@@ -79,6 +79,10 @@ func test_strike_phase_durations_match_contract() -> void:
 
 func test_strike_deals_damage_exactly_once_per_activation() -> void:
 	var combat = _player.combat
+	# Freeze the player's own movement/gravity — Combat is a separate node
+	# and keeps ticking independently — so it doesn't fall away (no floor in
+	# this fixture) from the fixed-position target before Strike activates.
+	_player.set_physics_process(false)
 	await _press_strike()
 
 	for i in range(40):
