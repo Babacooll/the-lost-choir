@@ -1,11 +1,16 @@
 # The Lost Choir
 
-Project home for **The Lost Choir**, an original 2D Metroidvania currently in Creative Discovery.
+Project home for **The Lost Choir**, an original 2D Metroidvania.
 
-This repository is an architecture-neutral placeholder established during project bootstrap. It intentionally contains no game code, engine choice, or technical scaffolding — those are decided during Game Technical Discovery, after Creative Direction is approved.
+Approved creative direction: `docs/creative-direction.md`.
+Approved technical direction: `ARCHITECTURE.md`.
+
+This repository still contains no game code. Vertical-slice implementation scope is a
+decision owned by the appropriate Game Development authorities, not this document.
 
 ## Status
 
-- Stage: pre-discovery bootstrap
-- Creative Discovery: tracked in Multica (Game Development squad)
-- Game Technical Discovery: parked behind Creative Discovery completion
+- Creative Discovery: Done — Creative Director GO persisted in `docs/creative-direction.md`
+- Game Technical Discovery: Done — Technical Direction GO persisted in `ARCHITECTURE.md`
+  (engine: Godot 4; audio runtime: FMOD Studio integration)
+- Vertical-slice scoping: not yet started
