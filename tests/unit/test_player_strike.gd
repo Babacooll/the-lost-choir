@@ -34,10 +34,6 @@ func before_each() -> void:
 	_input = InputSender.new(Input)
 	await get_tree().physics_frame
 	await get_tree().physics_frame
-	print("DIAG3 target inside_tree=%s global_pos=%s layer=%d mask=%d children=%d shape_disabled=%s" % [
-		_target.is_inside_tree(), _target.global_position, _target.collision_layer, _target.collision_mask,
-		_target.get_child_count(), (_target.get_child(0) as CollisionShape2D).disabled,
-	])
 
 
 func after_each() -> void:

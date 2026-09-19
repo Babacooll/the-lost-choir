@@ -70,11 +70,9 @@ var last_answer_result: String = ""  # "success" | "whiff" | ""
 func _ready() -> void:
 	if strike_hitbox != null:
 		strike_hitbox.monitoring = false
-		print("DIAG4 hitbox layer=%d mask=%d shape=%s coll_shape_disabled=%s" % [
-			strike_hitbox.collision_layer, strike_hitbox.collision_mask,
-			strike_hitbox.get_node("CollisionShape2D").shape,
-			strike_hitbox.get_node("CollisionShape2D").disabled,
-		])
+		var col_shape := strike_hitbox.get_node_or_null("CollisionShape2D")
+		if col_shape != null:
+			col_shape.disabled = true
 
 
 func register_tell_emitter(emitter: TellEmitter) -> void:
@@ -160,22 +158,27 @@ func _open_strike_hitbox() -> void:
 	if col_shape != null and col_shape.shape is RectangleShape2D:
 		col_shape.shape.size = Vector2(STRIKE_REACH_PX, STRIKE_HITBOX_HEIGHT_PX)
 	strike_hitbox.monitoring = true
+	# The shape itself starts disabled (see _ready/_close_strike_hitbox), not
+	# just unmonitored — a shape that was already overlapping something when
+	# monitoring turns on doesn't reliably produce a fresh "entered" pair, so
+	# each activation needs the shape to genuinely newly enter the physics
+	# world rather than merely start being watched.
+	if col_shape != null:
+		col_shape.disabled = false
 
 
 func _close_strike_hitbox() -> void:
 	if strike_hitbox != null:
+		var col_shape := strike_hitbox.get_node_or_null("CollisionShape2D")
+		if col_shape != null:
+			col_shape.disabled = true
 		strike_hitbox.monitoring = false
 
 
 func _apply_strike_hits() -> void:
 	if strike_hitbox == null:
 		return
-	var overlapping := strike_hitbox.get_overlapping_bodies()
-	var names := []
-	for b in overlapping:
-		names.append("%s@%s" % [b.name, b.global_position])
-	print("DIAG2 hitbox global_pos=%s overlapping=%s player_pos=%s" % [strike_hitbox.global_position, names, player.global_position])
-	for body in overlapping:
+	for body in strike_hitbox.get_overlapping_bodies():
 		# The hitbox starts flush against the player's own collider edge, so
 		# collision margins can report it as touching/overlapping — never a
 		# real hit.
