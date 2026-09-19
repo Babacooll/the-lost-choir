@@ -11,8 +11,8 @@ both audio-driven, not audio-decorated.
 
 ## Status
 
-Game Technical Discovery approved by the workspace owner (Creative Director) on
-2026-09-19 (GO on the Technical Direction Ready checkpoint presented on
+Game Technical Discovery approved by the workspace owner on 2026-09-19 (Technical
+Direction GO on the Technical Direction Ready checkpoint presented on
 [MICH-571](mention://issue/01a0bb4e-be3f-7414-9896-2898994de391)). This repository still
 contains no game code — that begins with a vertical-slice scope decision, owned by the
 appropriate Game Development authorities, not by this document.
@@ -71,7 +71,7 @@ workspace standard or is comparably hard to reverse.
 | Dev/debug tooling | In-game debug overlay visualizing the combat tell/response window against actual input | The tell window is narrow and central to whether combat feels fair; needs instrumentation from the start, not after tuning problems appear |
 | Performance/memory budgets | Deferred | No content yet to budget against; revisit at first vertical slice |
 | Build/export | Godot export templates, PC first (Windows/macOS/Linux) | No platform requirement beyond this surfaced anywhere in the creative direction |
-| Repository structure | Single Godot project repo; `docs/` for creative and technical direction; assets organized by discipline (art/audio/levels); FMOD project as a subfolder with its own build step | Keeps discipline ownership (Art/Narrative/Audio bibles, Engineering direction) visible at the top level |
+| Repository structure | Single Godot project repo; `ARCHITECTURE.md` at repository root as the canonical technical baseline (this document); `docs/` for creative direction and discipline bibles (Art/Narrative/Audio); assets organized by discipline (art/audio/levels); FMOD project as a subfolder with its own build step | Root-level `ARCHITECTURE.md` matches the workspace's canonical-architecture-document convention and stays immediately visible; `docs/` holds direction that composes underneath it |
 
 ## CI/CD and release path
 
@@ -88,12 +88,18 @@ Direction call.
 ## Conformance to the workspace technical standard
 
 `docs/technical-standards.md` (workspace `04bf8515-48ab-4102-a8bb-a732d3c07108`) declares
-defaults for backend, mobile, web, hosting, database, and CI/release automation — all
-SaaS/mobile-shaped. None of it addresses game engine, game audio middleware, game
-asset/animation pipelines, or game distribution, so none of those component classes are a
-deviation from anything declared; they are new decisions this project is making for
-itself. The one entry that transfers is CI/release automation (GitHub Actions), which this
-project conforms to.
+defaults for backend, mobile, web, hosting, database, CI/release automation, and
+multi-tenant SaaS core (`kernel-be`) — the first six SaaS/mobile-shaped, the seventh a
+mandatory question regardless of shape. None of the SaaS/mobile-shaped entries addresses
+game engine, game audio middleware, game asset/animation pipelines, or game distribution,
+so none of those component classes are a deviation from anything declared; they are new
+decisions this project is making for itself. The one entry that transfers as-is is
+CI/release automation (GitHub Actions), which this project conforms to.
+
+`kernel-be`: explicitly not used. The Lost Choir has no backend and no multi-tenancy, so
+building on `kernel-be` does not apply — the question the standard requires every new
+project to ask has been asked and answered here, per its mandatory-question rule ("Silently
+not asking is the deviation").
 
 ## Open / deferred
 
