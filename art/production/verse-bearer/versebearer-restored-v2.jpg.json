@@ -1,0 +1,15 @@
+{
+  "provider": "gemini",
+  "model": "gemini-3-pro-image",
+  "interaction_id": "v1_ChdzdmF1YXF5YUU5bWQzYm9QdUsyX2dRcxIXc3ZhdWFxeWFFOW1kM2JvUHVLMl9nUXM",
+  "prompt": "Flat 2D side-elevation game sprite concept art, STRICTLY ORTHOGONAL FRONT VIEW, no isometric/3-quarter perspective, no outline/contour linework anywhere — flat soft value-shaded shapes only, exactly matching the attached reference image's silhouette, arch, bell-chamber shape, proportions and crack path.\n\nSame object, same pose, same silhouette as the reference — the RESTORED / warm state of the identical object.\n\nChanges from the reference, and ONLY these:\n1. The single crack (same exact path/geometry as the reference, do not move or reroute it) now glows warm amber-gold from within (#ffc75e body, #fff2c4 hot core along its center, #ff9a3c only as the faintest outer bleed right at the crack edge) — the crack is the only strong light source.\n2. EXACTLY three thin glowing calligraphic wave-line strokes (and no more than two additional smaller secondary strokes) radiate from the crack — sparse, elegant, each a single flowing brush-line of varying thickness (thin at the ends, swelling slightly at the middle), the same warm gold color as the crack, fading to nothing well before reaching the edges of the chamber. Wide empty unmarked stone must remain visible between and around these strokes — most of the chamber surface stays completely plain, unmarked stone. Do NOT cover the surface in a pattern. Do NOT draw more than five total lines. This is restrained calligraphy, not ornamental filigree.\n3. The two dark metal fitting patches from the reference (base and near top) are now lit warm brass (#e0b849, tiny hot highlight #ffe9a3 only on the one nearest the crack).\n4. The stone body itself KEEPS its original muted brown/tan value from the reference — do not brighten or wash out the stone into gold. Only the crack, its handful of etch lines, and the two metal fittings actually emit light; everything else stays the same stone color as the reference, just readable as being near a light source (very slight warm falloff near the crack only, within about a third of the chamber width).\n\nNo burst, no shockwave, no starburst, no lens flare, no bloom halo, no explosion, no rays. Quiet, contained, restrained warmth — a seam of light, not a magic effect.\n\nForbidden: any outline/contour line; isometric/3-quarter perspective; face or eye-like read; readable musical notation/staves; dense decorative pattern covering the surface; neon color; insect anatomy; skull/ribcage read; text/watermark.\n\nSame flat dark background as the reference, centered, full figure visible.",
+  "references": [
+    "versebearer-cold-v2.jpg"
+  ],
+  "previous_interaction_id": null,
+  "size": "2K",
+  "aspect_ratio": "3:4",
+  "requested_mime_type": "image/jpeg",
+  "mime_type": "image/jpeg",
+  "transparent": false
+}

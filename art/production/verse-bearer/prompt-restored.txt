@@ -1,0 +1,15 @@
+Flat 2D side-elevation game sprite concept art, STRICTLY ORTHOGONAL FRONT VIEW, no isometric or 3/4 perspective, no outlines/contour linework anywhere — only flat soft value-shaded shapes, exactly matching the attached reference image's silhouette, proportions, arch frame, bell chamber shape, and crack path.
+
+Same subject, same pose, same silhouette, same arch/frame/chamber/aperture layout as the reference — this is the RESTORED / warm state of the identical object, not a new design.
+
+Changes from the reference, and ONLY these changes:
+1. The single crack path (same exact geometry/position as the reference — do not move, lengthen, or reroute it) now glows softly from within: warm amber-gold light (#ffc75e body, #fff2c4 hot core at the very center of the line, #ff9a3c only as the faintest outer bleed) emitting from the crack itself, like a thin lit seam of molten light in dark stone — the crack is now the only light source in the image.
+2. Fine calligraphic wave-line etchings (thin, flowing, hand-drawn brushstroke wave forms, NOT musical notation, NOT staves or note symbols) radiate outward from the crack across the stone surface near it, glowing the same warm gold as the crack, a few flowing lines only, sparse and elegant, not dense filigree.
+3. The dark green-bronze metal fitting patches from the reference (at the base and near the top of the chamber) are now lit warm brass/gold color (#e0b849 body, small hot highlight #ffe9a3 only on the brightest fitting nearest the crack) instead of dull green — they read as freshly lit dormant metal now responding to the light.
+4. The stone body itself stays close to its original warm brown/tan value range — do NOT brighten the whole stone into gold; only the crack, its etchings, and the metal fittings emit light. The rest of the surface is warmly lit by proximity to the seam glow but stays a muted stone color.
+
+No burst, no shockwave, no starburst, no lens flare, no bloom halo, no particle explosion, no rays of light — this is a quiet glowing seam, not a magical explosion. No screen flash. Calm and contained warmth.
+
+Forbidden: any outline or contour linework; isometric/3-quarter perspective; any face or eye-like read; readable musical notation or staves; neon color; insect anatomy; skull/ribcage read; text or watermark.
+
+Same flat dark background as the reference, centered, full figure visible.

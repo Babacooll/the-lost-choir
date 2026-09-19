@@ -1,0 +1,13 @@
+{
+  "provider": "gemini",
+  "model": "gemini-3-pro-image",
+  "interaction_id": "v1_ChdzdmV1YXVQNUQ1U3R2ZElQejhDZDBRTRIXc3ZldWF1UDVENVN0dmRJUHo4Q2QwUU0",
+  "prompt": "Flat top-down-neutral 2D game tileset material reference sheet, orthogonal, no perspective, no outline/contour linework anywhere — only flat soft value-shaded shapes, like clean flat gouache blocks with no ink lines.\n\nSubject: a small composed patch of ancient amphitheatre travertine stone masonry blocks, meant as a tile material reference for a pixel-art game (displayed as a grid of square stone blocks fitted together, ashlar masonry pattern, blocks roughly uniform size).\n\nPalette — strictly these five muted warm stone values, used as flat blocks of color with soft value-step separation between blocks (never a black line at the joints — the joint itself is a thin darker-value gap, like a contact shadow): deepest crevice/mortar gap #3b2f28, shadow face #5a4638, body #806450, lit face #a8876b, rim/chipped edge highlight #cbae8c (used sparingly, only on a few worn block corners/edges).\n\nSurface detail: a few hairline cracks across block faces, small chipped corners revealing the paler rim color, subtle mottled weathering — all rendered as soft value patches, never as drawn linework or hatching. Blocks read as solid, load-bearing, ancient but sound stone. Curved/arced block edges where a block is naturally worn, straight-cut edges elsewhere (this is cut masonry, straight lines are correct here as it is a built material, not organic).\n\nComposition: an evenly lit flat square swatch, camera dead-on, filling the frame, representative of a tileable wall/floor surface — no single hero object, no vignette, just repeatable material.\n\nForbidden: any outline/contour line; any bright/saturated color; brass, gold, or metal color; glowing anything; text, icons, UI, or watermark; organic/insect texture; photographic realism.",
+  "references": [],
+  "previous_interaction_id": null,
+  "size": "2K",
+  "aspect_ratio": "1:1",
+  "requested_mime_type": "image/jpeg",
+  "mime_type": "image/jpeg",
+  "transparent": false
+}

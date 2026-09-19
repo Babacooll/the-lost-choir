@@ -1,0 +1,13 @@
+{
+  "provider": "gemini",
+  "model": "gemini-3-pro-image",
+  "interaction_id": "v1_ChdGZml1YXJqTEM4aWt2ZElQckxiRXlRVRIXRmZpdWFyakxDOGlrdmRJUHJMYkV5UVU",
+  "prompt": "A flat game tile material swatch, ashlar masonry stone blocks, same overall composition and block layout as the attached reference (a grid of roughly-square travertine stone blocks) but with one critical correction:\n\nREMOVE ALL OUTLINES. The reference has a hard dark contour line drawn around every single block — delete that entirely. Blocks must separate from their neighbors using ONLY a soft value-step difference between adjacent block colors (a block that is #806450 sits next to a block that is #5a4638, and the joint between them is just that color boundary, at most one pixel-equivalent of a slightly darker seam color, never a bold black or brown ink line). The blocks should look flat-shaded and painterly, almost blending together at a glance, not graphically outlined like a cartoon or mobile-game icon.\n\nKeep: the same ashlar block pattern and proportions, the same warm stone palette (deepest crevice #3b2f28 only in the thin mortar seams, shadow #5a4638, body #806450, lit face #a8876b, rim highlight #cbae8c used sparingly on a few worn corners), the same hairline cracks and weathering patches as soft value marks (not linework).\n\nForbidden: any outline or contour line of any weight or color; bright/saturated color; brass/gold/metal color; glow; text or watermark.",
+  "references": [],
+  "previous_interaction_id": null,
+  "size": "2K",
+  "aspect_ratio": "1:1",
+  "requested_mime_type": "image/jpeg",
+  "mime_type": "image/jpeg",
+  "transparent": false
+}

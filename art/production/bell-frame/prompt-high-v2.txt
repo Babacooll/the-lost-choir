@@ -1,0 +1,13 @@
+Same composition, camera, and layout as the attached reference image (a suspended bell in a vertical stone guide-rail niche) — keep the pose, silhouette, and framing identical. Flat orthogonal front view, no outline/contour linework, flat soft value-shaded shapes only.
+
+Correct these specific problems from the reference:
+
+1. The bell is currently far too bright, saturated, and yellow — it reads as glowing lit gold. This is the COLD, DORMANT default state: the bell must be dull, muted, unlit bronze-brass. Repaint it using only these muted tones: #7d5a1d (shadow), #b98c2c (body/lit face) — NO bright yellow, NO #ffe9a3-style highlight, NO specular sparkle, NO glow. It should look like tarnished old brass sitting in shadow, clearly metal by its smooth curved shape and value range, but visually flat and quiet, not eye-catching.
+
+2. Remove the two small green prong/antenna shapes poking up above the yoke — the yoke should be a simple, plain curved bracket gripping the top of the bell, nothing projecting above it.
+
+3. Make the polished worn band on the guide rail narrower and more subtle — a slim vertical stripe roughly one-sixth the width of the rail, not covering most of the rail's surface. The rest of the rail stays the same plain stone color as the wall around it.
+
+Keep everything else the same: the dark tarnished-bronze yoke color, the slight off-plumb tilt, the stone rail material, the worn stone floor mark at the bottom, the flat dark background, the overall vertical composition.
+
+Forbidden: bright/saturated/glowing brass or gold color; any highlight or specular sparkle on the bell; outline/contour lines; isometric perspective; text, icons, symbols.

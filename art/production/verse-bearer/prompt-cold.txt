@@ -1,0 +1,15 @@
+Game art concept, pixel-art style, orthogonal 2D side view, static camera, no perspective distortion.
+
+Subject: a great seated bell-shaped stone entity, "the Verse-bearer" — an ancient instrument-like figure fused into an amphitheatre wall, cold and dormant state. It reads as THREE clearly separated masses: (1) a large resonating CHAMBER — a great bell-curve body, like an enormous inverted bell or bronze bell fused with stone, seated/settled low; (2) a FRAME — a stone structural surround that the chamber is partly grown into or fused with, echoing the amphitheatre architecture around it, built from arcs and curves (catenary sag, bell curvature), not straight edges except where clearly broken or cut; (3) an APERTURE — a closed, collapsed opening near the top/front of the chamber where a taut drum-membrane once was, now sagging and inert.
+
+A single hairline crack runs as ONE continuous unbroken path from the lower chamber, up across the collapsed aperture, and over the shoulder of the bell form. The crack is pure black void — a hole with nothing behind it, NOT a glowing line, no light emitting from it at all.
+
+Materials and palette — strict, muted, desaturated warm stone and old bronze: warm grey-brown travertine stone body (mid-value browns like #806450, #a8876b), dust-pale plaster highlights (#bda880, #ded0a8), and old dark verdigris-bronze fittings (#4d6152, #6f8f74) at the joins — dull, oxidized, NOT shiny, NOT gold, NOT yellow, NO warm glow anywhere. The bronze fittings look like dormant, tarnished dark metal — visibly metal by their smooth curved shape and value range, but completely unlit, no specular highlight, no brass color, no gold color anywhere in the image.
+
+Surface detail is entirely wear and history — chips, dust film, hairline stone cracks, worn bronze oxidation crust — never linework, never a drawn outline, never hatching. No ink contour anywhere; every form edge is a soft value-step transition, not a black outline.
+
+Absolutely forbidden: any face, eyes, or readable facial features; any glowing or emissive color; any gold, yellow, orange, or bright warm color; any insect anatomy; any skull or ribcage reading as literal bone; any readable musical notation, staves or clef symbols; any outline/ink contour; any neon or sci-fi color; any lens flare or bloom; any modern UI element; any text or watermark.
+
+Mood: silent, cold, ancient, held breath. A dead instrument, not a dead body. Muted low-contrast lighting, cool grey undertone, no warm light source anywhere in the scene.
+
+Full figure visible, centered, isolated on a plain dark neutral background so the silhouette is legible. This is a game asset reference sheet image, not an illustration with dramatic lighting or depth of field.

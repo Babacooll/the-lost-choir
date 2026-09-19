@@ -1,0 +1,13 @@
+{
+  "provider": "gemini",
+  "model": "gemini-3-pro-image",
+  "interaction_id": "v1_ChdTX2V1YXJqdE9zaWt2ZElQZ01qRHdRcxIXU19ldWFyanRPc2lrdmRJUGdNakR3UXM",
+  "prompt": "Flat 2D side-elevation game prop concept art, STRICTLY ORTHOGONAL FRONT VIEW, no isometric/3-quarter perspective, no outline or contour linework anywhere — only flat soft value-shaded shapes, no ink lines.\n\nSubject: a suspended bell-shaped mouth-down metal bell, hanging inside a simple vertical stone guide-rail track set into a wall niche, in its HIGH / default cold-dormant position (near the top of its travel).\n\nThree clear masses: (1) the BELL itself — a smooth curved bell-mouth-down form, dull unlit brass-bronze color (#7d5a1d shadow, #b98c2c body — muted, NOT bright, NOT glowing, no specular highlight), hanging mouth-down; (2) a simple dark tarnished-bronze YOKE (#4d6152) gripping the top of the bell and connecting it to a thin vertical guide rail; (3) the guide RAIL — a plain vertical stone-colored track (#806450 body) running up the wall behind/beside the bell, with a visible polished/worn vertical band down its length (slightly paler value, #a8876b) showing exactly the distance the bell has traveled up and down over time — evidence of a mechanism, not decoration.\n\nThe bell hangs very slightly off-plumb, tilted just a degree or two from vertical, not perfectly straight — implying it swings gently.\n\nComposition: tall vertical format, the whole rail-and-bell assembly centered and fully visible, bell near the top of the frame with rail extending below it toward a simple worn stone floor mark. Flat neutral dark background, no cast shadow, no gradient floor, silhouette-forward reference framing.\n\nForbidden: any outline/contour line; isometric/3-quarter perspective; bright glowing brass/gold color or specular highlight (this bell is cold and dormant, dull metal only); any light source, glow, or bloom; text, icons, or UI glyphs, arrows, or symbols; insect anatomy; skull or bone shapes; realistic photographic texture; chains or ropes (this hangs from a rigid yoke on a rail, not a chain).",
+  "references": [],
+  "previous_interaction_id": null,
+  "size": "2K",
+  "aspect_ratio": "3:4",
+  "requested_mime_type": "image/jpeg",
+  "mime_type": "image/jpeg",
+  "transparent": false
+}

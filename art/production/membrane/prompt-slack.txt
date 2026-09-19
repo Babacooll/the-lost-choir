@@ -1,0 +1,11 @@
+Flat 2D side-elevation game prop concept art, STRICTLY ORTHOGONAL FRONT VIEW (looking straight at a circular drum mounted flat in a floor/wall gap), no isometric/3-quarter perspective, no outline or contour linework anywhere — only flat soft value-shaded shapes, like clean flat-shaded gouache with no ink lines.
+
+Subject: a wide, shallow circular drum-skin disc set into a floor gap — a "membrane" — in its SLACK/default state. A round bronze hoop ring (like a tambourine rim) holds a stretched hide/fabric membrane that sags inward with a gentle catenary dip, about a quarter of the hoop's diameter deep at the center, like a loose drum skin nobody has tightened.
+
+Materials: the hoop is dull dark oxidized bronze-green metal (#4d6152 body, #6f8f74 verdigris bloom at a few raised bumps = the tensioning lugs spaced evenly around the rim), with a few small bright worn contact-polish spots (pale warm tan #a8876b) on the lugs where hands or tools have repeatedly touched them — evidence of a tensioning mechanism, not decoration. The membrane skin itself is a dry, dusty tan-brown hide color (#7c6d5a body, darker #2b2621 in the sagging shadow at the center), with a very faint pale dust film scattered unevenly across its surface (#8d7a5e specks).
+
+Composition: wide horizontal format, the disc nearly fills the frame edge to edge, seen dead-on and flat (not from an angle), sitting in a plain dark stone-colored floor gap that just barely frames it top and bottom.
+
+Absolutely forbidden: any outline/contour line; isometric or angled perspective; bright brass/gold color (this is cold dormant metal, dull and dark, not lit); glowing anything; text, icons, UI glyphs, arrows, or any symbol indicating interactivity; insect anatomy; realistic photographic texture.
+
+Flat neutral dark background beyond the floor gap, centered, no cast shadow, silhouette-forward game asset reference framing.

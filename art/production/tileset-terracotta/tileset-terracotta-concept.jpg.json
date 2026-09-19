@@ -1,0 +1,13 @@
+{
+  "provider": "gemini",
+  "model": "gemini-3-pro-image",
+  "interaction_id": "v1_ChdPdml1YXF5WkJMUHhuc0VQMDVYQy1RVRIXT3ZpdWFxeVpCTFB4bnNFUDA1WEMtUVU",
+  "prompt": "A flat game tile material swatch, fired terracotta tile facing (like ancient amphitheatre seating-riser cladding), orthogonal dead-on view, filling the frame with a grid of roughly-square terracotta tile blocks.\n\nCRITICAL: no outline or contour line of any kind around any tile. Tiles separate from each other purely by soft flat color-value difference at the joint — never a drawn dark ink line. Flat painterly shading, gouache-like, edges are soft value transitions only.\n\nPalette — strictly these four warm reddish-orange terracotta values, used as flat color patches: shadow #5c2b1f, body #8c3f2a, lit face #b85a35, rim highlight #d98149 (sparingly, on a few worn tile edges/corners only). This should read distinctly warmer and more saturated red-orange than plain grey-brown stone — terracotta is a fired clay material, not a grey stone.\n\nSurface detail: a few hairline stress cracks and small chipped corners as soft value marks, subtle warm mottling — never linework or hatching.\n\nForbidden: any outline/contour line; bright neon color; brass/gold/metal color; glow; text or watermark; photographic realism.",
+  "references": [],
+  "previous_interaction_id": null,
+  "size": "2K",
+  "aspect_ratio": "1:1",
+  "requested_mime_type": "image/jpeg",
+  "mime_type": "image/jpeg",
+  "transparent": false
+}

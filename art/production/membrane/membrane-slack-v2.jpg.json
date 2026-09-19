@@ -1,0 +1,15 @@
+{
+  "provider": "gemini",
+  "model": "gemini-3-pro-image",
+  "interaction_id": "v1_ChdJUGV1YXZPS0tQdnR4czBQdVBQRDBBSRIXSVBldWF2T0tLUHZ0eHMwUHVQUEQwQUk",
+  "prompt": "Flat game prop concept art for a 2D side-scrolling platformer, a circular drum-skin disc set into a floor gap, viewed at the same foreshortened angle/ellipse as the attached reference (a floor-mounted disc seen from a 2D side camera) — keep that same camera angle and overall composition, do not change it.\n\nSame subject and materials as the reference (dull oxidized bronze-green hoop with worn tensioning lugs, dusty tan hide membrane), but correct these two things:\n\n1. The membrane's sag must be SHALLOW, not a deep funnel or hole. In the reference the center dips into a dark bowl about half the hoop's depth — make it much shallower: a gentle, barely-there catenary dip, only about one-tenth as deep as the hoop's width, so the skin still reads as clearly stretched flat and taut-adjacent, just barely slack. The center should stay a similar mid-brown value to the rest of the skin with only a soft, subtle shadow gradient — not a near-black void. This must read as \"a drum nobody has tightened yet,\" not as a hole, pit, or portal.\n\n2. Remove all crisp dark outline/contour lines. Do not draw a hard dark line around the rim, around the lug bumps, or between the hoop and the skin. Every edge must be a soft flat color value transition only, no ink line of any weight anywhere, same flat-shaded-no-outline treatment as the rest of this game's asset language.\n\nKeep: the dull dark green-bronze hoop color, the evenly spaced raised tensioning lugs with a few pale worn-bright contact spots, the dusty tan-brown skin color with scattered faint dust specks, the same wide horizontal disc-in-a-floor-gap composition, flat neutral dark background.\n\nForbidden: any outline/contour line; bright brass/gold color; glowing anything; deep dark hole/void read at the center; text, icons, or UI glyphs; insect anatomy.",
+  "references": [
+    "membrane-slack.jpg"
+  ],
+  "previous_interaction_id": null,
+  "size": "2K",
+  "aspect_ratio": "16:9",
+  "requested_mime_type": "image/jpeg",
+  "mime_type": "image/jpeg",
+  "transparent": false
+}
