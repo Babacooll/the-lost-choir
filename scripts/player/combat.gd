@@ -166,10 +166,11 @@ func _apply_strike_hits() -> void:
 	if strike_hitbox == null:
 		return
 	var overlapping := strike_hitbox.get_overlapping_bodies()
-	print("DIAG strike hitbox: monitoring=%s global_pos=%s shape_size=%s overlapping=%d" % [
-		strike_hitbox.monitoring, strike_hitbox.global_position,
-		(strike_hitbox.get_node("CollisionShape2D").shape as RectangleShape2D).size,
-		overlapping.size(),
+	var names := []
+	for b in overlapping:
+		names.append("%s(%s)@%s has_take_strike=%s" % [b.name, b.get_class(), b.global_position, b.has_method("take_strike")])
+	print("DIAG strike hitbox: monitoring=%s global_pos=%s overlapping=%s" % [
+		strike_hitbox.monitoring, strike_hitbox.global_position, names,
 	])
 	for body in overlapping:
 		if body in _struck_bodies:
