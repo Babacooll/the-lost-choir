@@ -50,7 +50,6 @@ var strike_state: int = StrikeState.IDLE
 var _strike_timer_ms: float = 0.0
 var _strike_buffer := InputBuffer.new(&"strike")
 var _struck_bodies: Array = []
-var _diag_tick_count: int = 0
 
 var answer_state: int = AnswerState.IDLE
 var _answer_timer_ms: float = 0.0
@@ -96,12 +95,6 @@ func _physics_process(delta: float) -> void:
 	var delta_ms := delta * 1000.0
 	_strike_buffer.poll()
 	_answer_buffer.poll()
-	_diag_tick_count += 1
-	if _diag_tick_count <= 12:
-		print("DIAG combat tick #%d strike_state=%d strike_just_pressed=%s strike_pressed=%s strike_buffered=%s last_press=%s now=%s" % [
-			_diag_tick_count, strike_state, Input.is_action_just_pressed(&"strike"), Input.is_action_pressed(&"strike"),
-			_strike_buffer.is_buffered(STRIKE_BUFFER_MS), _strike_buffer.last_press_ms(), Time.get_ticks_msec(),
-		])
 
 	_update_strike(delta_ms)
 	_update_answer(delta_ms)
@@ -187,10 +180,10 @@ func _update_answer(delta_ms: float) -> void:
 		AnswerState.IDLE:
 			# Startup is 0 ms — "read on press" — so unlike Strike/Jump there's
 			# no eligibility window to buffer against; Answer is always
-			# immediately actionable while idle. Still read the timestamp
-			# through the shared InputBuffer (polled above) rather than a
-			# fresh clock read, so it's the exact instant that got recorded.
-			if Input.is_action_just_pressed(&"answer"):
+			# immediately actionable while idle. just_pressed comes from the
+			# buffer's own rising-edge detection (polled above), not
+			# Input.is_action_just_pressed() directly — see input_buffer.gd.
+			if _answer_buffer.just_pressed:
 				_start_answer(_answer_buffer.last_press_ms())
 		AnswerState.ACTIVE_POSE:
 			_answer_timer_ms -= delta_ms

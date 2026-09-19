@@ -40,6 +40,7 @@ func test_answer_succeeds_when_pressed_inside_open_window() -> void:
 
 	_input.action_down(&"answer")
 	await get_tree().physics_frame
+	_input.action_up(&"answer")
 
 	assert_eq(combat.last_answer_result, "success")
 	assert_false(_emitter.is_open(), "a resolved tell should no longer be open")
@@ -52,6 +53,7 @@ func test_answer_succeeds_via_pre_window_buffer_before_onset() -> void:
 	var combat = _player.combat
 	_input.action_down(&"answer")
 	await get_tree().physics_frame
+	_input.action_up(&"answer")
 	var press_ms: float = combat.last_answer_press_ms
 
 	await wait_seconds(0.06)  # well inside the 120 ms pre-window buffer
@@ -67,6 +69,7 @@ func test_answer_whiffs_when_pressed_too_early_beyond_the_buffer() -> void:
 	var combat = _player.combat
 	_input.action_down(&"answer")
 	await get_tree().physics_frame
+	_input.action_up(&"answer")
 
 	await wait_seconds(0.2)  # 200 ms > 120 ms buffer — too early to count
 	_emitter.open_tell(300.0)
@@ -86,6 +89,7 @@ func test_answer_recovery_whiff_lasts_220ms() -> void:
 	var combat = _player.combat
 	_input.action_down(&"answer")  # no tell registered/open at all -> guaranteed whiff
 	await get_tree().physics_frame
+	_input.action_up(&"answer")
 
 	var ticks := 0
 	while combat.answer_state != combat.AnswerState.RECOVERY_WHIFF and ticks < 30:
@@ -129,6 +133,7 @@ func test_resolved_note_holds_for_1200ms_then_expires() -> void:
 	await get_tree().physics_frame
 	_input.action_down(&"answer")
 	await get_tree().physics_frame
+	_input.action_up(&"answer")
 	assert_true(combat.has_resolved_note())
 
 	await wait_seconds(1.0)

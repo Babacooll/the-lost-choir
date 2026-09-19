@@ -42,6 +42,7 @@ func test_overlay_plots_a_successful_answer_against_its_tell_window() -> void:
 	await wait_seconds(0.05)
 	_input.action_down(&"answer")
 	await get_tree().physics_frame
+	_input.action_up(&"answer")
 
 	assert_eq(combat.last_answer_result, "success")
 

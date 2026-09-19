@@ -10,15 +10,31 @@ extends RefCounted
 
 var action: StringName
 var _last_press_ms: float = -INF
+var _was_pressed: bool = false
+
+## True only during the poll() call that detected the rising edge — for
+## callers (like Answer, whose 0 ms startup means it acts on the edge
+## directly rather than through a buffered window) that want "was this
+## action just pressed" without a window comparison.
+var just_pressed: bool = false
 
 func _init(p_action: StringName) -> void:
 	action = p_action
 
 
-## Call once per physics frame to record a fresh press.
+## Call once per physics frame to record a fresh press. Detects the rising
+## edge itself (comparing this poll to the last one) rather than relying on
+## Input.is_action_just_pressed(), which is only guaranteed accurate for
+## nodes polled directly by the engine's own per-frame input pass — a node
+## nested under another (like Combat under Player) can poll on a tick where
+## the "just pressed" flag has already lapsed even though the action only
+## just became pressed as far as this buffer has observed it.
 func poll() -> void:
-	if Input.is_action_just_pressed(action):
+	var is_pressed := Input.is_action_pressed(action)
+	just_pressed = is_pressed and not _was_pressed
+	if just_pressed:
 		_last_press_ms = Time.get_ticks_msec()
+	_was_pressed = is_pressed
 
 
 ## True if the most recent press falls within `window_ms` before `now_ms`
