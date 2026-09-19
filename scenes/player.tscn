@@ -1,9 +1,13 @@
-[gd_scene load_steps=3 format=3 uid="uid://b3k4l7dv1m8xq"]
+[gd_scene load_steps=5 format=3 uid="uid://b3k4l7dv1m8xq"]
 
 [ext_resource type="Script" path="res://scripts/player/player.gd" id="1_player"]
+[ext_resource type="Script" path="res://scripts/player/combat.gd" id="2_combat"]
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_collider"]
 size = Vector2(18, 40)
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_strike_hitbox"]
+size = Vector2(22, 30)
 
 [node name="Player" type="CharacterBody2D" groups=["player"]]
 script = ExtResource("1_player")
@@ -20,3 +24,13 @@ polygon = PackedVector2Array(-9, -40, 9, -40, 9, 0, -9, 0)
 
 [node name="Camera2D" type="Camera2D" parent="."]
 position_smoothing_enabled = true
+
+[node name="Combat" type="Node" parent="."]
+script = ExtResource("2_combat")
+
+[node name="StrikeHitbox" type="Area2D" parent="."]
+position = Vector2(20, -20)
+monitorable = false
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="StrikeHitbox"]
+shape = SubResource("RectangleShape2D_strike_hitbox")

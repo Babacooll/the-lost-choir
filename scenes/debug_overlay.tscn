@@ -1,6 +1,7 @@
-[gd_scene load_steps=2 format=3 uid="uid://cq6w3n8t2f0yh"]
+[gd_scene load_steps=3 format=3 uid="uid://cq6w3n8t2f0yh"]
 
 [ext_resource type="Script" path="res://scripts/debug/debug_overlay.gd" id="1_overlay"]
+[ext_resource type="Script" path="res://scripts/debug/tell_timeline.gd" id="2_timeline"]
 
 [node name="DebugOverlay" type="CanvasLayer"]
 layer = 10
@@ -9,8 +10,8 @@ script = ExtResource("1_overlay")
 [node name="Panel" type="Panel" parent="."]
 offset_left = 8.0
 offset_top = 8.0
-offset_right = 280.0
-offset_bottom = 96.0
+offset_right = 320.0
+offset_bottom = 196.0
 
 [node name="MarginContainer" type="MarginContainer" parent="Panel"]
 layout_mode = 1
@@ -22,8 +23,21 @@ theme_override_constants/margin_top = 8
 theme_override_constants/margin_right = 8
 theme_override_constants/margin_bottom = 8
 
-[node name="Readout" type="Label" parent="Panel/MarginContainer"]
+[node name="VBox" type="VBoxContainer" parent="Panel/MarginContainer"]
+layout_mode = 2
+theme_override_constants/separation = 6
+
+[node name="Readout" type="Label" parent="Panel/MarginContainer/VBox"]
 layout_mode = 2
 text = "state: idle
 velocity: (0.0, 0.0)
 on_floor: true"
+
+[node name="TellTimelineLabel" type="Label" parent="Panel/MarginContainer/VBox"]
+layout_mode = 2
+text = "Answer vs. tell window (§3.3):"
+
+[node name="TellTimeline" type="Control" parent="Panel/MarginContainer/VBox"]
+custom_minimum_size = Vector2(0, 40)
+layout_mode = 2
+script = ExtResource("2_timeline")
