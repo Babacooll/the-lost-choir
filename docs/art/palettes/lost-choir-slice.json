@@ -1,0 +1,256 @@
+{
+  "name": "Lost Choir -- vertical slice",
+  "scope": "slice-scoped; see docs/art/vertical-slice-art-direction.md",
+  "generated_by": "tools/art/build_palette.py",
+  "cold_transform": {
+    "space": "sRGB 8-bit",
+    "desaturate_toward_luma": {
+      "default": 0.72,
+      "brass": 0.55
+    },
+    "channel_tint": {
+      "default": [
+        0.88,
+        0.96,
+        1.08
+      ],
+      "brass": [
+        0.92,
+        0.97,
+        1.03
+      ]
+    },
+    "pull_to_cold_mid": {
+      "color": "#39424f",
+      "amount": 0.18,
+      "applies_to": "everything except brass"
+    },
+    "brass_unlit_value_scale": 0.82
+  },
+  "colors": [
+    {
+      "id": "ST0",
+      "family": "stone",
+      "role": "deepest crevice",
+      "warm": "#3b2f28",
+      "cold": "#303237"
+    },
+    {
+      "id": "ST1",
+      "family": "stone",
+      "role": "shadow",
+      "warm": "#5a4638",
+      "cold": "#42454b"
+    },
+    {
+      "id": "ST2",
+      "family": "stone",
+      "role": "body",
+      "warm": "#806450",
+      "cold": "#5a5d65"
+    },
+    {
+      "id": "ST3",
+      "family": "stone",
+      "role": "lit face",
+      "warm": "#a8876b",
+      "cold": "#757982"
+    },
+    {
+      "id": "ST4",
+      "family": "stone",
+      "role": "rim / chipped edge",
+      "warm": "#cbae8c",
+      "cold": "#9097a2"
+    },
+    {
+      "id": "WX0",
+      "family": "wax",
+      "role": "shadow",
+      "warm": "#8d7a5e",
+      "cold": "#676d75"
+    },
+    {
+      "id": "WX1",
+      "family": "wax",
+      "role": "body",
+      "warm": "#bda880",
+      "cold": "#89919a"
+    },
+    {
+      "id": "WX2",
+      "family": "wax",
+      "role": "lit",
+      "warm": "#ded0a8",
+      "cold": "#a3b0bd"
+    },
+    {
+      "id": "WX3",
+      "family": "wax",
+      "role": "highest value in the kit",
+      "warm": "#f4ecd0",
+      "cold": "#b6c5d8"
+    },
+    {
+      "id": "TC0",
+      "family": "terra",
+      "role": "shadow",
+      "warm": "#5c2b1f",
+      "cold": "#383337"
+    },
+    {
+      "id": "TC1",
+      "family": "terra",
+      "role": "body",
+      "warm": "#8c3f2a",
+      "cold": "#4f464a"
+    },
+    {
+      "id": "TC2",
+      "family": "terra",
+      "role": "lit",
+      "warm": "#b85a35",
+      "cold": "#675d60"
+    },
+    {
+      "id": "TC3",
+      "family": "terra",
+      "role": "rim",
+      "warm": "#d98149",
+      "cold": "#817a7c"
+    },
+    {
+      "id": "BZ0",
+      "family": "bronze",
+      "role": "shadow",
+      "warm": "#2f3a33",
+      "cold": "#30383e"
+    },
+    {
+      "id": "BZ1",
+      "family": "bronze",
+      "role": "body",
+      "warm": "#4d6152",
+      "cold": "#49555d"
+    },
+    {
+      "id": "BZ2",
+      "family": "bronze",
+      "role": "verdigris bloom",
+      "warm": "#6f8f74",
+      "cold": "#667781"
+    },
+    {
+      "id": "BZ3",
+      "family": "bronze",
+      "role": "verdigris lit crust",
+      "warm": "#9dbfa2",
+      "cold": "#889daa"
+    },
+    {
+      "id": "HK0",
+      "family": "husk",
+      "role": "frame shadow",
+      "warm": "#2b2621",
+      "cold": "#272a2f"
+    },
+    {
+      "id": "HK1",
+      "family": "husk",
+      "role": "frame body",
+      "warm": "#4f453a",
+      "cold": "#3f4349"
+    },
+    {
+      "id": "HK2",
+      "family": "husk",
+      "role": "membrane dried",
+      "warm": "#7c6d5a",
+      "cold": "#5d636b"
+    },
+    {
+      "id": "HK3",
+      "family": "husk",
+      "role": "membrane lit / taut",
+      "warm": "#b2a288",
+      "cold": "#838c98"
+    },
+    {
+      "id": "VD0",
+      "family": "void",
+      "role": "interior black",
+      "warm": "#14161c",
+      "cold": "#1a1d23"
+    },
+    {
+      "id": "VD1",
+      "family": "void",
+      "role": "near-black",
+      "warm": "#23262f",
+      "cold": "#252a32"
+    },
+    {
+      "id": "VD2",
+      "family": "void",
+      "role": "ambient floor",
+      "warm": "#333a47",
+      "cold": "#323944"
+    },
+    {
+      "id": "BR0",
+      "family": "brass",
+      "role": "deep seat",
+      "warm": "#4a3312",
+      "cold": "#2f2a20"
+    },
+    {
+      "id": "BR1",
+      "family": "brass",
+      "role": "shadow",
+      "warm": "#7d5a1d",
+      "cold": "#514936"
+    },
+    {
+      "id": "BR2",
+      "family": "brass",
+      "role": "body",
+      "warm": "#b98c2c",
+      "cold": "#7a7153"
+    },
+    {
+      "id": "BR3",
+      "family": "brass",
+      "role": "lit face",
+      "warm": "#e0b849",
+      "cold": "#999371"
+    },
+    {
+      "id": "BR4",
+      "family": "brass",
+      "role": "specular -- legal only where w > 0",
+      "warm": "#ffe9a3",
+      "cold": "#b7b9aa"
+    },
+    {
+      "id": "SM0",
+      "family": "seam",
+      "role": "outer bleed",
+      "warm": "#ff9a3c",
+      "cold": null
+    },
+    {
+      "id": "SM1",
+      "family": "seam",
+      "role": "body",
+      "warm": "#ffc75e",
+      "cold": null
+    },
+    {
+      "id": "SM2",
+      "family": "seam",
+      "role": "core",
+      "warm": "#fff2c4",
+      "cold": null
+    }
+  ]
+}
