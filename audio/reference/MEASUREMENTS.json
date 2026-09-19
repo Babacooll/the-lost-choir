@@ -1,0 +1,72 @@
+{
+  "sample_rate": 48000,
+  "transients": [
+    {
+      "cue": "tell_reed_husk_520ms",
+      "peak_at_ms": 2.0,
+      "onsets_ms": [
+        1.0,
+        95.6
+      ],
+      "within_160ms": true,
+      "band_170_700Hz": 0.543,
+      "band_700_4000Hz": 0.429,
+      "centroid_hz": 894.0,
+      "first160ms_LUFS": -23.0,
+      "peak_dBFS": -3.0
+    },
+    {
+      "cue": "tell_keening_husk_700ms",
+      "peak_at_ms": 93.8,
+      "onsets_ms": "n/a (continuous tone)",
+      "within_160ms": true,
+      "band_170_700Hz": 0.008,
+      "band_700_4000Hz": 0.986,
+      "centroid_hz": 1064.0,
+      "first160ms_LUFS": -23.0,
+      "peak_dBFS": -14.1,
+      "pitch_break_to_G5_ms": 72.0
+    },
+    {
+      "cue": "tell_reed_husk_458ms_compressed",
+      "peak_at_ms": 2.0,
+      "onsets_ms": [
+        1.0,
+        95.6
+      ],
+      "within_160ms": true,
+      "band_170_700Hz": 0.541,
+      "band_700_4000Hz": 0.43,
+      "centroid_hz": 917.0,
+      "first160ms_LUFS": -23.0,
+      "peak_dBFS": -3.0
+    },
+    {
+      "cue": "tell_keening_husk_616ms_compressed",
+      "peak_at_ms": 101.0,
+      "onsets_ms": "n/a (continuous tone)",
+      "within_160ms": true,
+      "band_170_700Hz": 0.008,
+      "band_700_4000Hz": 0.986,
+      "centroid_hz": 1064.0,
+      "first160ms_LUFS": -23.0,
+      "peak_dBFS": -13.8,
+      "pitch_break_to_G5_ms": 72.0
+    }
+  ],
+  "loudness_LUFS": {
+    "leitmotif_cold_acappella": -29.5,
+    "leitmotif_warm_grounded": -29.6,
+    "amb_cold_near_silence": -46.0,
+    "amb_warm_restored": -28.0,
+    "r6_offer_5note": -20.8,
+    "r6_restoration_complete": -21.6,
+    "cold_to_warm_ambience_LU": 18.0,
+    "leitmotif_grounding_LU": -0.1,
+    "leitmotif_cold_low30_200_dB": -48.0,
+    "leitmotif_warm_low30_200_dB": 3.4,
+    "leitmotif_grounding_lowband_dB": 51.4,
+    "r6_sting_check_LU": -0.8,
+    "r6_no_victory_sting": true
+  }
+}
