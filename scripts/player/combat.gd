@@ -165,7 +165,13 @@ func _close_strike_hitbox() -> void:
 func _apply_strike_hits() -> void:
 	if strike_hitbox == null:
 		return
-	for body in strike_hitbox.get_overlapping_bodies():
+	var overlapping := strike_hitbox.get_overlapping_bodies()
+	print("DIAG strike hitbox: monitoring=%s global_pos=%s shape_size=%s overlapping=%d" % [
+		strike_hitbox.monitoring, strike_hitbox.global_position,
+		(strike_hitbox.get_node("CollisionShape2D").shape as RectangleShape2D).size,
+		overlapping.size(),
+	])
+	for body in overlapping:
 		if body in _struck_bodies:
 			continue
 		_struck_bodies.append(body)
