@@ -20,7 +20,7 @@ const TERMINAL_FALL_SPEED: float = 520.0    # px/s
 const COYOTE_TIME: float = 0.10             # 100 ms
 const JUMP_BUFFER_TIME: float = 0.12        # 120 ms
 
-const CORNER_CORRECTION_PX: float = 4.0     # ceiling-corner nudge, load-bearing for H1
+const CORNER_CORRECTION_PX: float = 4.0     # horizontal ceiling-corner clip tolerance, load-bearing for H1
 
 # Derived kinematics (do not hand-tune; these follow from the table above).
 const ACCEL: float = RUN_MAX_SPEED / ACCEL_TIME
@@ -31,6 +31,11 @@ const JUMP_VELOCITY: float = 2.0 * JUMP_APEX_HEIGHT / TIME_TO_APEX
 const RISE_GRAVITY: float = JUMP_VELOCITY / TIME_TO_APEX
 const FALL_GRAVITY: float = RISE_GRAVITY * FALL_GRAVITY_MULT
 
+# Vertical look-ahead for the corner-correction probes — how far we're about to
+# rise into a ceiling this tick. Not a design value; §3.1's 4 px figure is a
+# horizontal clip tolerance (CORNER_CORRECTION_PX above), not this.
+const CORNER_PROBE_MIN_LOOKAHEAD: float = 1.0
+
 @onready var collision_shape: CollisionShape2D = $CollisionShape2D
 
 var coyote_timer: float = 0.0
@@ -38,14 +43,22 @@ var jump_buffer_timer: float = 0.0
 var was_on_floor: bool = false
 var jump_held: bool = false
 var jump_cut_applied: bool = false
+# Only a jump that was still holding Jump as it launched can ever be cut short.
+# A buffered tap whose button was already up when the jump fires keeps its full
+# 56 px / 320 ms apex — nothing in §3.1 lets a pre-landing release retroactively
+# read as a mid-rise release.
+var jump_cut_eligible: bool = false
 
 # Exposed for the debug overlay (checkpoint 3 just needs a readout).
 var debug_state: String = "idle"
 
 func _physics_process(delta: float) -> void:
 	_apply_horizontal_movement(delta)
-	_apply_gravity(delta)
+	# Buffer/coyote resolution runs before gravity so a jump that launches this
+	# tick is evaluated against this tick's freshly-sampled input, not last
+	# frame's stale jump_held.
 	_handle_jump_buffer_and_coyote(delta)
+	_apply_gravity(delta)
 	_try_corner_correction(delta)
 
 	was_on_floor = is_on_floor()
@@ -69,15 +82,22 @@ func _apply_horizontal_movement(delta: float) -> void:
 
 func _apply_gravity(delta: float) -> void:
 	if is_on_floor():
-		velocity.y = 0.0
+		# is_on_floor() still reflects the last move_and_slide() until the next
+		# one runs. If a jump launched earlier this tick, velocity.y is already
+		# negative — leave it alone rather than clobbering the jump, and skip
+		# gravity/cut for this single tick (the body hasn't left the floor yet
+		# as far as physics is concerned).
+		if velocity.y >= 0.0:
+			velocity.y = 0.0
 		return
 
 	var gravity := RISE_GRAVITY if velocity.y < 0.0 else FALL_GRAVITY
 	velocity.y += gravity * delta
 	velocity.y = min(velocity.y, TERMINAL_FALL_SPEED)
 
-	# Variable jump cut: releasing Jump before apex (still rising) cuts vy once.
-	if velocity.y < 0.0 and not jump_held and not jump_cut_applied:
+	# Variable jump cut: releasing Jump before apex (still rising) cuts vy once,
+	# but only for a jump that was actually being held as it launched.
+	if velocity.y < 0.0 and jump_cut_eligible and not jump_held and not jump_cut_applied:
 		velocity.y *= JUMP_CUT_MULTIPLIER
 		jump_cut_applied = true
 
@@ -103,14 +123,20 @@ func _handle_jump_buffer_and_coyote(delta: float) -> void:
 		jump_buffer_timer = 0.0
 		coyote_timer = 0.0
 		jump_cut_applied = false
+		jump_cut_eligible = jump_held
 
 
 func _try_corner_correction(delta: float) -> void:
-	# A jump that clips a ceiling corner within CORNER_CORRECTION_PX is nudged
-	# horizontally rather than stopped. Probe just above the collider's top edge
-	# on the side we're moving toward; if only that corner is blocked, nudge away.
+	# A jump that clips a ceiling corner within a 4 px HORIZONTAL tolerance is
+	# nudged sideways rather than stopped — the spec's case is centre clear,
+	# leading corner blocked. Centre blocked is a real ceiling contact and must
+	# bonk normally, not be nudged into (or through) the obstruction.
 	if velocity.y >= 0.0:
 		return
+
+	var dir := signf(velocity.x)
+	if dir == 0.0:
+		return  # no horizontal approach, nothing to correct
 
 	var shape := collision_shape.shape as RectangleShape2D
 	if shape == null:
@@ -118,26 +144,36 @@ func _try_corner_correction(delta: float) -> void:
 
 	var half_width := shape.size.x * 0.5
 	var top_y := collision_shape.position.y - shape.size.y * 0.5
-	var probe_dir := signf(velocity.x) if velocity.x != 0.0 else 1.0
+	var probe_lookahead := maxf(CORNER_PROBE_MIN_LOOKAHEAD, -velocity.y * delta)
 
-	var space_state := get_world_2d().direct_space_state
-	var query := PhysicsRayQueryParameters2D.create(
-		global_position + Vector2(0.0, top_y),
-		global_position + Vector2(0.0, top_y - CORNER_CORRECTION_PX)
-	)
-	query.exclude = [self]
-	var center_hit := space_state.intersect_ray(query)
-	if center_hit.is_empty():
+	# Centre clear?
+	if _probe_blocked(0.0, top_y, probe_lookahead):
+		return  # real ceiling contact ahead; let it bonk normally
+
+	# Leading corner (the side we're moving into) blocked?
+	var leading_x := dir * half_width
+	if not _probe_blocked(leading_x, top_y, probe_lookahead):
+		return  # leading corner clear too; nothing to correct
+
+	# Would nudging CORNER_CORRECTION_PX away from the obstruction actually
+	# clear it? If that point is still blocked, this is wider than a corner
+	# sliver — a real wall — and must not be nudged through.
+	var nudged_x := leading_x - dir * CORNER_CORRECTION_PX
+	if _probe_blocked(nudged_x, top_y, probe_lookahead):
 		return
 
-	var corner_query := PhysicsRayQueryParameters2D.create(
-		global_position + Vector2(probe_dir * half_width, top_y),
-		global_position + Vector2(probe_dir * half_width, top_y - CORNER_CORRECTION_PX)
-	)
-	corner_query.exclude = [self]
-	var corner_hit := space_state.intersect_ray(corner_query)
-	if corner_hit.is_empty():
-		global_position.x -= probe_dir * CORNER_CORRECTION_PX
+	# Move away from the obstruction with a collision-aware motion so we can
+	# never nudge into (or through) something solid.
+	move_and_collide(Vector2(-dir * CORNER_CORRECTION_PX, 0.0))
+
+
+func _probe_blocked(x_offset: float, top_y: float, lookahead: float) -> bool:
+	var from := global_position + Vector2(x_offset, top_y)
+	var to := from + Vector2(0.0, -lookahead)
+	var query := PhysicsRayQueryParameters2D.create(from, to)
+	query.exclude = [self]
+	var hit := get_world_2d().direct_space_state.intersect_ray(query)
+	return not hit.is_empty()
 
 
 func _update_debug_state() -> void:

@@ -39,6 +39,11 @@ jobs:
       - name: Import project
         run: godot --headless --verbose --path . --import --quit
 
+      - name: Install export templates
+        run: |
+          mkdir -v -p "$HOME/.local/share/godot/export_templates"
+          cp -r /root/.local/share/godot/export_templates/* "$HOME/.local/share/godot/export_templates/"
+
       - name: Export Linux smoke build
         run: |
           mkdir -v -p build/linux
