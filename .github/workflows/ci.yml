@@ -1,0 +1,53 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+env:
+  GODOT_VERSION: "4.3"
+
+jobs:
+  gut-tests:
+    name: Headless GUT tests
+    runs-on: ubuntu-latest
+    container:
+      image: barichello/godot-ci:4.3
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Import project
+        run: godot --headless --verbose --path . --import --quit
+
+      - name: Run GUT test suite
+        run: |
+          godot --headless --path . \
+            -s addons/gut/gut_cmdln.gd \
+            -gdir=res://tests/unit \
+            -ginclude_subdirs \
+            -gexit
+
+  export-smoke:
+    name: Export smoke build (Linux)
+    runs-on: ubuntu-latest
+    container:
+      image: barichello/godot-ci:4.3
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Import project
+        run: godot --headless --verbose --path . --import --quit
+
+      - name: Export Linux smoke build
+        run: |
+          mkdir -v -p build/linux
+          godot --headless --verbose --path . \
+            --export-debug "Linux Smoke Build" build/linux/the-lost-choir.x86_64
+
+      - name: Upload smoke build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux-smoke-build
+          path: build/linux/
+          retention-days: 7
