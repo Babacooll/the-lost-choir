@@ -129,14 +129,11 @@ func _handle_jump_buffer_and_coyote(delta: float) -> void:
 func _try_corner_correction(delta: float) -> void:
 	# A jump that clips a ceiling corner within a 4 px HORIZONTAL tolerance is
 	# nudged sideways rather than stopped — the spec's case is centre clear,
-	# leading corner blocked. Centre blocked is a real ceiling contact and must
-	# bonk normally, not be nudged into (or through) the obstruction.
+	# a corner blocked, with no precondition on horizontal approach speed.
+	# Centre blocked is a real ceiling contact and must bonk normally, not be
+	# nudged into (or through) the obstruction.
 	if velocity.y >= 0.0:
 		return
-
-	var dir := signf(velocity.x)
-	if dir == 0.0:
-		return  # no horizontal approach, nothing to correct
 
 	var shape := collision_shape.shape as RectangleShape2D
 	if shape == null:
@@ -150,10 +147,30 @@ func _try_corner_correction(delta: float) -> void:
 	if _probe_blocked(0.0, top_y, probe_lookahead):
 		return  # real ceiling contact ahead; let it bonk normally
 
-	# Leading corner (the side we're moving into) blocked?
+	var dir := signf(velocity.x)
+	if dir != 0.0:
+		# Directional approach: only the leading corner (the side we're
+		# moving into) can clip.
+		_nudge_away_from_corner(dir, half_width, top_y, probe_lookahead)
+		return
+
+	# Standing/vertical jump: there's no horizontal approach to pick a
+	# "leading" side, so probe both corners directly and nudge away from
+	# whichever one alone is clipped. Both (or neither) blocked has no
+	# unambiguous side to nudge toward, so it falls through to the normal
+	# collision response (a real ceiling bonk, or nothing).
+	var left_blocked := _probe_blocked(-half_width, top_y, probe_lookahead)
+	var right_blocked := _probe_blocked(half_width, top_y, probe_lookahead)
+	if left_blocked and not right_blocked:
+		_nudge_away_from_corner(-1.0, half_width, top_y, probe_lookahead)
+	elif right_blocked and not left_blocked:
+		_nudge_away_from_corner(1.0, half_width, top_y, probe_lookahead)
+
+
+func _nudge_away_from_corner(dir: float, half_width: float, top_y: float, probe_lookahead: float) -> void:
 	var leading_x := dir * half_width
 	if not _probe_blocked(leading_x, top_y, probe_lookahead):
-		return  # leading corner clear too; nothing to correct
+		return  # nothing to correct on this side
 
 	# Would nudging CORNER_CORRECTION_PX away from the obstruction actually
 	# clear it? If that point is still blocked, this is wider than a corner

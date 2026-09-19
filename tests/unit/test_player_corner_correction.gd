@@ -86,6 +86,42 @@ func test_centre_blocked_is_a_real_bonk_not_a_sideways_nudge() -> void:
 		"centre blocked is a real ceiling contact: must not be nudged sideways")
 
 
+func test_vertical_jump_right_corner_sliver_nudges_left() -> void:
+	# A standing/vertical jump (no horizontal input, velocity.x == 0.0) has no
+	# "leading" side, but §3.1's clause has no horizontal-approach
+	# precondition — a jump straight up into a corner sliver must still be
+	# nudged, not bonked dead. Mirrors the Reviewer's measured setup: a ~2 px
+	# sliver clipping one corner, centre and the other corner clear.
+	_player.global_position = Vector2(0, 0)
+	_player.velocity = Vector2(0, -200)  # straight up, no horizontal approach
+	_make_ceiling_obstacle(Vector2(9, -46), Vector2(2, 10))  # 2 px sliver over the right corner only
+
+	await _settle_physics()
+
+	var before_x: float = _player.global_position.x
+	_player._try_corner_correction(0.016)
+
+	assert_lt(_player.global_position.x, before_x,
+		"vertical jump clipping a right-corner sliver should still nudge left, away from it")
+
+
+func test_vertical_jump_both_corners_clear_is_untouched() -> void:
+	# Sanity check for the other half of the fix: when neither corner is
+	# blocked, the dual-corner probe for a vertical jump must not move the
+	# player at all, even with an obstacle nearby.
+	_player.global_position = Vector2(0, 0)
+	_player.velocity = Vector2(0, -200)
+	_make_ceiling_obstacle(Vector2(30, -46), Vector2(6, 10))  # clear of centre and both corners
+
+	await _settle_physics()
+
+	var before_x: float = _player.global_position.x
+	_player._try_corner_correction(0.016)
+
+	assert_eq(_player.global_position.x, before_x,
+		"vertical jump with both corners clear must not be nudged")
+
+
 func test_wide_obstruction_beyond_tolerance_is_not_nudged_through() -> void:
 	# Leading corner (x = 9) is blocked and centre (x = 0) is clear, but the
 	# obstruction spans x = 3..33 — wider than the 4 px tolerance, so nudging
