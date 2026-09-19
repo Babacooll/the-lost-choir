@@ -13,6 +13,10 @@ var _obstacle: StaticBody2D
 func before_each() -> void:
 	_player = PlayerScene.instantiate()
 	add_child_autofree(_player)
+	# Isolate _try_corner_correction from the player's own automatic
+	# _physics_process (gravity, horizontal integration, move_and_slide) —
+	# each test drives the probe function directly and checks only its effect.
+	_player.set_physics_process(false)
 
 
 func after_each() -> void:
