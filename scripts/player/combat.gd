@@ -165,7 +165,12 @@ func _close_strike_hitbox() -> void:
 func _apply_strike_hits() -> void:
 	if strike_hitbox == null:
 		return
-	for body in strike_hitbox.get_overlapping_bodies():
+	var overlapping := strike_hitbox.get_overlapping_bodies()
+	var names := []
+	for b in overlapping:
+		names.append("%s@%s" % [b.name, b.global_position])
+	print("DIAG2 hitbox global_pos=%s overlapping=%s player_pos=%s" % [strike_hitbox.global_position, names, player.global_position])
+	for body in overlapping:
 		# The hitbox starts flush against the player's own collider edge, so
 		# collision margins can report it as touching/overlapping — never a
 		# real hit.
