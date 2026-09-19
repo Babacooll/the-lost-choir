@@ -70,6 +70,11 @@ var last_answer_result: String = ""  # "success" | "whiff" | ""
 func _ready() -> void:
 	if strike_hitbox != null:
 		strike_hitbox.monitoring = false
+		print("DIAG4 hitbox layer=%d mask=%d shape=%s coll_shape_disabled=%s" % [
+			strike_hitbox.collision_layer, strike_hitbox.collision_mask,
+			strike_hitbox.get_node("CollisionShape2D").shape,
+			strike_hitbox.get_node("CollisionShape2D").disabled,
+		])
 
 
 func register_tell_emitter(emitter: TellEmitter) -> void:
