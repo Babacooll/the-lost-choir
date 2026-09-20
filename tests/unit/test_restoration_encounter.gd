@@ -188,13 +188,29 @@ func test_narrative_line_holds_at_least_1800ms() -> void:
 	await _wait_until(func(): return _encounter._emitter.is_open())
 	await _press_answer()
 	await _wait_until(func(): return _encounter.narrative_lines_delivered() >= 1, 120)
-	assert_true(_encounter._line_visible)
+	assert_true(_encounter._line_visible, "the first line should show at the first gap")
 
-	await _wait_ticks(85)  # ~1.4 s more — still short of the 1800 ms hold
+	# Keep answering every note that opens while the hold plays out, so no
+	# missed note's silence gap coincidentally lands on (and races) the
+	# 1800 ms hold boundary this test is asserting against — notes are
+	# spaced close enough to it (1100 ms) that an unanswered one would.
+	var ticks := 0
+	while ticks < 85:  # ~1.4 s — still short of the 1800 ms hold
+		if _encounter._emitter.is_open():
+			await _press_answer()
+		else:
+			await get_tree().physics_frame
+		ticks += 1
 	assert_true(_encounter._line_visible, "a line must not hide before its 1800 ms minimum hold elapses")
 
-	await _wait_until(func(): return not _encounter._line_visible, 60)
-	assert_false(_encounter._line_visible)
+	ticks = 0
+	while _encounter._line_visible and ticks < 60:
+		if _encounter._emitter.is_open():
+			await _press_answer()
+		else:
+			await get_tree().physics_frame
+		ticks += 1
+	assert_false(_encounter._line_visible, "a line must hide once its 1800 ms minimum hold (plus fade) elapses")
 
 
 func test_narrative_index_persists_across_a_failed_attempt() -> void:
