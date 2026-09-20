@@ -1,7 +1,8 @@
-[gd_scene load_steps=4 format=3 uid="uid://b3k4l7dv1m8xq"]
+[gd_scene load_steps=5 format=3 uid="uid://b3k4l7dv1m8xq"]
 
 [ext_resource type="Script" path="res://scripts/player/player.gd" id="1_player"]
 [ext_resource type="Script" path="res://scripts/player/combat.gd" id="2_combat"]
+[ext_resource type="Script" path="res://scripts/player/sustain.gd" id="3_sustain"]
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_collider"]
 size = Vector2(18, 40)
@@ -24,3 +25,6 @@ position_smoothing_enabled = true
 
 [node name="Combat" type="Node" parent="."]
 script = ExtResource("2_combat")
+
+[node name="Sustain" type="Node" parent="."]
+script = ExtResource("3_sustain")

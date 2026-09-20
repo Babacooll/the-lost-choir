@@ -21,7 +21,9 @@ so far and `## Running the project` for how to open it.
   scripted dummy tell emitter), checkpoint 3 (Reed Husk, Keening Husk, the shared
   tell contract's stagger/arbitration/compression rules), checkpoint 4 (the R6
   restoration encounter — §7's offer/response phrase, adaptive shortening/
-  extension, narrative delivery, and the restoration flag flip), and the
+  extension, narrative delivery, and the restoration flag flip), checkpoint 5
+  (Sustain and Return — §4.1's breath-gated traversal verb with real membranes
+  and bell-frames, and §4.2's Strike-becomes-Return combat payoff), and the
   seven-room zone graph (§6, LDtk-into-Godot pipeline) are in this repository.
 
 ## Running the project (Godot editor)
@@ -43,11 +45,12 @@ Requires [Godot 4.3](https://godotengine.org/download) (GDScript, no C# build ne
    and a Reed Husk and a Keening Husk (§5) to fight. It is not reachable from
    `Zone.tscn`'s default run.
 
-Controls: `A`/`D` or `←`/`→` to move, `Space` to jump, `J` to Strike, `K` to
-Answer, `F3` to toggle the debug overlay (off by default; plots the tell
-window — including the identifying-transient marker — against your Answer
-presses). `T` additionally opens a manual tell window on `test_room.tscn`'s
-dummy emitter — that scene only.
+Controls: `A`/`D` or `←`/`→` to move, `Space` to jump, `J` to Strike (or Return,
+while holding a resolved note post-restoration — §4.2), `K` to Answer, `L` to
+hold Sustain (post-restoration only — §4.1), `F3` to toggle the debug overlay
+(off by default; plots the tell window — including the identifying-transient
+marker — against your Answer presses). `T` additionally opens a manual tell
+window on `test_room.tscn`'s dummy emitter — that scene only.
 
 Running the CI-produced export build will be documented once the export pipeline lands
 (see `.github/workflows/ci.yml` for the current smoke-build step).

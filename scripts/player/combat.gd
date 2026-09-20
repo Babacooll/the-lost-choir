@@ -38,10 +38,21 @@ const ANSWER_FAIL_INVULN_MS: float = 600.0
 
 enum AnswerState { IDLE, ACTIVE_POSE, RECOVERY_WHIFF }
 
+# --- §4.2 Return design contract (post-restoration only) --------------------
+# While holding a resolved note, Strike becomes Return: no new button, the
+# same press releases the just-answered enemy's own note back at it. Startup
+# differs from Strike's; active/recovery reuse Strike's own timing since §4.2
+# specifies no separate numbers for them — Return changes what the press
+# does, not the beat it's on.
+const RETURN_STARTUP_MS: float = 120.0
+const RETURN_DAMAGE: int = STRIKE_DAMAGE * 3
+const RETURN_STAGGER_MS: float = 1600.0
+
 signal strike_state_changed(state: int)
 signal answer_state_changed(state: int)
 signal answer_resolved(emitter: TellEmitter, press_ms: float)
 signal answer_whiffed(press_ms: float)
+signal return_executed(target: Node)
 
 @onready var player: CharacterBody2D = get_parent()
 
@@ -61,6 +72,8 @@ var strike_state: int = StrikeState.IDLE
 var _strike_timer_ms: float = 0.0
 var _strike_buffer := InputBuffer.new(&"strike")
 var _struck_bodies: Array = []
+var _is_return: bool = false  # true for this Strike-state activation only
+var _last_resolved_emitter: TellEmitter = null
 
 var answer_state: int = AnswerState.IDLE
 var _answer_timer_ms: float = 0.0
@@ -138,16 +151,21 @@ func _update_strike(delta_ms: float) -> void:
 		StrikeState.IDLE:
 			if _strike_buffer.is_buffered(STRIKE_BUFFER_MS):
 				_strike_buffer.consume()
+				_is_return = _can_return()
 				_set_strike_state(StrikeState.STARTUP)
-				_strike_timer_ms = STRIKE_STARTUP_MS
+				_strike_timer_ms = RETURN_STARTUP_MS if _is_return else STRIKE_STARTUP_MS
 		StrikeState.STARTUP:
 			_strike_timer_ms -= delta_ms
 			if _strike_timer_ms <= 0.0:
 				_set_strike_state(StrikeState.ACTIVE)
 				_strike_timer_ms = STRIKE_ACTIVE_MS
-				_open_strike_hitbox()
+				if _is_return:
+					_execute_return()
+				else:
+					_open_strike_hitbox()
 		StrikeState.ACTIVE:
-			_apply_strike_hits()
+			if not _is_return:
+				_apply_strike_hits()
 			_strike_timer_ms -= delta_ms
 			if _strike_timer_ms <= 0.0:
 				_close_strike_hitbox()
@@ -157,6 +175,31 @@ func _update_strike(delta_ms: float) -> void:
 			_strike_timer_ms -= delta_ms
 			if _strike_timer_ms <= 0.0:
 				_set_strike_state(StrikeState.IDLE)
+
+
+## §4.2: Strike becomes Return only while holding a resolved note, only
+## post-restoration, and only if that note's tell belongs to something that
+## can actually take a hit (the restoration encounter's own notes don't —
+## Return is a combat tool, Answer against the Verse-bearer stays a plain
+## Answer either way).
+func _can_return() -> bool:
+	if not GameState.restoration_complete or not has_resolved_note():
+		return false
+	if not is_instance_valid(_last_resolved_emitter):
+		return false
+	var target := _last_resolved_emitter.get_parent()
+	return target != null and target.has_method("take_strike")
+
+
+func _execute_return() -> void:
+	var target := _last_resolved_emitter.get_parent()
+	if target != null and target.has_method("take_strike"):
+		target.take_strike(RETURN_DAMAGE)
+	_last_resolved_emitter.stagger_ms = RETURN_STAGGER_MS
+	# The note is spent the instant it's returned — a second Strike press
+	# during what's left of the same window must not Return it again.
+	resolved_note_timer_ms = 0.0
+	return_executed.emit(target)
 
 
 func _set_strike_state(state: int) -> void:
@@ -312,6 +355,7 @@ func _resolve_answer_success(emitter: TellEmitter) -> void:
 	_answer_press_pending = false
 	emitter.resolve(ANSWER_ENEMY_STAGGER_MS)
 	resolved_note_timer_ms = RESOLVED_NOTE_HOLD_MS
+	_last_resolved_emitter = emitter
 	last_answer_result = "success"
 	answer_resolved.emit(emitter, _answer_pending_press_ms)
 

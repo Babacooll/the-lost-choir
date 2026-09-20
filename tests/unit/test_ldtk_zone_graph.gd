@@ -86,6 +86,28 @@ func test_r6_encounter_marker_spawns_the_restoration_encounter() -> void:
 	assert_true(found_encounter, "R6's EncounterMarker should spawn a real RestorationEncounter, not stay inert")
 
 
+func test_r4_bell_frame_marker_spawns_a_real_bell_frame() -> void:
+	# §4.1's bell-frame bridges R4's floor to its "visibly unreachable upper
+	# ledge" (§6) — this is the wiring the marker was built for.
+	var room := preload("res://scenes/levels/R4_MembraneHall.tscn").instantiate()
+	add_child_autofree(room)
+	await get_tree().physics_frame
+
+	var frames := get_tree().get_nodes_in_group("bell_frame")
+	assert_eq(frames.size(), 1, "R4 has exactly one bell-frame")
+	assert_true(frames[0] is BellFrame)
+
+
+func test_r7_membrane_marker_spawns_a_real_membrane() -> void:
+	var room := preload("res://scenes/levels/R7_WarmReturn.tscn").instantiate()
+	add_child_autofree(room)
+	await get_tree().physics_frame
+
+	var membranes := get_tree().get_nodes_in_group("membrane")
+	assert_eq(membranes.size(), 1, "R7 has exactly one membrane on its Sustain-gated route (§6)")
+	assert_true(membranes[0] is Membrane)
+
+
 func test_gated_door_is_closed_until_restoration_flag_is_set() -> void:
 	var room := preload("res://scenes/levels/R4_MembraneHall.tscn").instantiate()
 	add_child_autofree(room)
