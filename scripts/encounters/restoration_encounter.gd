@@ -50,7 +50,6 @@ var _emitter: TellEmitterScript
 
 var _phrase_length: int = BASE_PHRASE_LENGTH
 var _note_index: int = 0
-var _consecutive_successes: int = 0
 var _consecutive_failures: int = 0
 
 var _note_elapsed_ms: float = 0.0
@@ -131,7 +130,6 @@ func _on_note_resolved() -> void:
 func _on_note_missed() -> void:
 	if state != State.OFFERING:
 		return
-	_consecutive_successes = 0
 	_consecutive_failures += 1
 	_phrase_length = _shortened_phrase_length_after_failure()
 	state = State.SILENCE
@@ -140,19 +138,15 @@ func _on_note_missed() -> void:
 
 
 func _complete_attempt() -> void:
+	_consecutive_failures = 0
 	if _phrase_length >= MAX_PHRASE_LENGTH:
 		_restore()
 		return
-	_consecutive_failures = 0
-	if _phrase_length < BASE_PHRASE_LENGTH:
-		# Recovering from adaptive shortening returns to base rather than
-		# resuming the extension ladder from mid-recovery — "the game meets
-		# the player" (§7.4), not "raises the bar the moment they recover."
-		_consecutive_successes = 0
-		_phrase_length = BASE_PHRASE_LENGTH
-	else:
-		_consecutive_successes += 1
-		_phrase_length = mini(MAX_PHRASE_LENGTH, BASE_PHRASE_LENGTH + _consecutive_successes)
+	# Phrase length is a single ladder (1..5, §7.5 as amended by PR #15): a
+	# completed attempt always climbs exactly one rung from wherever
+	# shortening left the player — never a snap back to base, and never a
+	# jump straight into the extension track either.
+	_phrase_length += 1
 	_note_index = 0
 	# The next note's onset is still scheduled by the running NOTE_SPACING_MS
 	# timer (started when this attempt's final note opened) — an attempt
@@ -165,12 +159,17 @@ func _restart_phrase() -> void:
 	_open_note()
 
 
+## §7.4 as amended by PR #15: the thresholds are absolute floors reached
+## from wherever the player currently is, not a fixed step relative to it —
+## "a player at 4 notes who fails twice drops to 2," the same target a
+## player at base (3) drops to. A failure that doesn't cross a threshold
+## (1st, 3rd, ...) holds the current length; it does not shorten on its own.
 func _shortened_phrase_length_after_failure() -> int:
 	if _consecutive_failures >= SHORTEN_TO_1_AFTER_FAILURES:
-		return 1
+		return mini(_phrase_length, 1)
 	if _consecutive_failures >= SHORTEN_TO_2_AFTER_FAILURES:
-		return 2
-	return BASE_PHRASE_LENGTH
+		return mini(_phrase_length, 2)
+	return _phrase_length
 
 
 func _restore() -> void:

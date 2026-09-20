@@ -141,7 +141,31 @@ func test_completed_attempt_resets_the_failure_streak() -> void:
 
 	await _complete_current_attempt()
 	assert_eq(_encounter._consecutive_failures, 0, "a completed phrase should reset the consecutive-failure count")
-	assert_eq(_encounter._phrase_length, 3, "recovering from a shortened phrase should return toward base length")
+	assert_eq(_encounter._phrase_length, 3, "completing a 2-note phrase should climb exactly one rung, to 3")
+
+
+func test_two_failures_from_an_extended_phrase_drop_relative_to_current_not_to_base() -> void:
+	# PR #15's ruling: "the thresholds shorten from wherever the player
+	# currently is — a player at 4 notes who fails twice drops to 2." A
+	# single failure along the way must hold, not snap back to base 3.
+	await _complete_current_attempt()  # 3 -> 4
+	assert_eq(_encounter._phrase_length, 4)
+
+	await _fail_full_attempt()
+	assert_eq(_encounter._phrase_length, 4, "a single failure must hold the current length, not snap to base")
+
+	await _fail_full_attempt()
+	assert_eq(_encounter._phrase_length, 2, "two consecutive failures from 4 notes should drop to 2, per the ruling")
+
+
+func test_completing_a_1_note_phrase_climbs_to_2_not_back_to_base() -> void:
+	for i in range(4):
+		await _fail_full_attempt()
+	assert_eq(_encounter._phrase_length, 1, "four consecutive failures should floor the phrase at 1 note")
+
+	await _complete_current_attempt()
+	assert_eq(_encounter._phrase_length, 2,
+		"completing a 1-note phrase should climb exactly one rung, to 2 — not back to base 3 (§7.5 as amended)")
 
 
 func test_completing_attempts_extends_the_phrase_then_restores_on_5() -> void:
