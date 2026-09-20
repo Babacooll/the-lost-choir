@@ -83,6 +83,23 @@ masses at a glance: a **chamber** (the resonating volume), a **frame** (what hol
 the Verse-bearer read as one world. It is also what makes the two husks read as *one rule with
 two values* rather than two unrelated monsters (§7) — the slice's H6 lives or dies here.
 
+**All three must be exterior.** R3 counts masses in the outer contour, so an aperture that is a
+*cut into a surface* — a slot, a port, a hole in a wall — cannot be the third mass, because a
+black fill does not show it. Each entity has to nominate an aperture form that breaks its own
+outline:
+
+| entity | aperture as a silhouette mass |
+|---|---|
+| Reed Husk | the split reed **protrudes** — already exterior (§7.2) |
+| Keening Husk | the drawn pipe throat **rises clear** of the chamber (§7.2) |
+| Verse-bearer | the bell's **mouth** — the flared lower lip, with open space beneath it (§8) |
+| Listener | the chest seam is *not* a mass; its three are hood, shoulder yoke, hem (§6) |
+
+This was a live contradiction in earlier drafts rather than a subtlety: §8 named the bearer's
+third mass as an aperture cut into the chamber wall, which R3 then declared invisible. An asset
+pass failed that test twice trying to satisfy both rules at once. If a test here cannot be
+passed, it is the test that is wrong.
+
 **R3 — Silhouette test, at shipping size.** Fill the sprite 100% black, **resampled to its
 authored canvas size** (64 × 72, 32 × 48, …), and it must still be identifiable as which entity
 it is. The size is not a detail of the test — it *is* the test. A concept render judged at 1792 px
@@ -514,12 +531,23 @@ slice's art rules — flagged in §12.
 The slice's thesis in one asset. 64 × 72 px, seated in the amphitheatre's focus. It is the
 game's **sacred** bell, and the only bell in the slice — see §9.2.
 
+**The three masses, corrected.** They are the **chamber** (the bell body), the **frame ribs**,
+and the **mouth** (the flared lower lip). The slot cut in the chamber wall is the *wound*, not
+the aperture — a bell's aperture is its mouth, which is where sound actually leaves and which
+exists in the outline. Two geometric requirements follow, and neither was stated before:
+
+- **The ribs must protrude past the chamber's widest point**, with real negative space between
+  rib and chamber. A rib contour-continuous with the chamber is a colour boundary, not a mass,
+  and black fill reads the pair as one blob with an interior notch.
+- **The mouth stands clear of the ground on those ribs.** The gap beneath the lip is what makes
+  the third mass legible; without it the bearer meets the floor as a single skirt.
+
 **The arch is not part of this sprite.** The niche the bearer sits in is *architecture*: it
 belongs to the `stone` tileset, authored as a niche the bearer is placed into. Baked into a
 64 × 72 sprite it cannot be composed against a tileset, and — worse — its legs touch the
 chamber's shoulders, which fuses frame and chamber into one hooded contour and destroys the
-three-mass read at shipping size. The bearer's own three masses are **chamber**, **frame ribs**,
-**aperture**, all within its own 64 × 72.
+three-mass read at shipping size. The bearer's three masses are the ones named above, all within
+its own 64 × 72.
 
 **Dormant state.** Matte, cracked. Authored warm per §4.1b; its cold read is the derive's output,
 never hand-painted.
@@ -614,9 +642,18 @@ symbol.** No icons, no glyph hints, no outline pulse, no "?" marker. The world s
 |---|---|---|
 | Form | catenary sag, 5 px deep at centre, across a `BZ1` bronze hoop | flat, 1 px crown, hoop rim visibly loaded |
 | Palette (both authored **warm**, §4.1b) | `HK2` skin, `HK0` in the sag, `BZ0`/`BZ1` hoop | `HK3` skin, `BZ2` hoop, `BZ3` hoop specular |
-| Size | 64 × 20 px (hoop 64 px across) | same footprint, skin raised to the hoop plane |
+| Size | 64 × 20 px — an **ellipse**, hoop 64 px across and 20 px deep | same footprint, skin raised to the hoop plane |
 | Read | "a drum nobody has tightened" | "a floor" |
 | Sag | off-centre and asymmetric — deepest point ~⅓ across, never at the middle | — |
+
+**The 64 × 20 canvas is correct, and it is not a squashed circle.** A membrane is a horizontal
+surface the player stands on, and in a flat side-on renderer a horizontal surface is always seen
+near-edge-on — that foreshortening is the platformer's convention for "this is a floor", not a
+perspective effect. §14's "flat orthogonal, no three-quarter view" bans *staged* perspective:
+convergence, a camera angle, a cast shadow, a floor plane. It does not ask for a head-on circle,
+which would read as a wall-mounted disc nobody can stand on. The rule over-generalised, and the
+question was right to ask rather than guess a third time: **horizontal surfaces are
+foreshortened, upright subjects are not.**
 
 `HK2` → `HK3` between the two rows is a **state** difference, not a warmth one: a tightened skin
 catches light differently from a slack one. Both rows are authored warm and both are then run
