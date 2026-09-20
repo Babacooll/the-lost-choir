@@ -24,6 +24,11 @@ func before_each() -> void:
 	_player = PlayerScene.instantiate()
 	add_child_autofree(_player)
 	_player.global_position = Vector2(0, 20)
+	# Freeze the player's own movement/gravity — Combat is a separate node
+	# and keeps ticking independently (established in the Strike hitbox
+	# tests) — these tests are about the husk, not player movement, and a
+	# fixed reference point makes the aggro/attack-range distances exact.
+	_player.set_physics_process(false)
 
 	_reed = ReedHuskScene.instantiate()
 	add_child_autofree(_reed)

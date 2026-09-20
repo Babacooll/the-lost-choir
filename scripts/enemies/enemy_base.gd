@@ -114,15 +114,8 @@ func _physics_process(delta: float) -> void:
 	move_and_slide()
 
 
-var _diag2_count: int = 0
-
 func _run_approach(delta: float, delta_ms: float) -> void:
 	var distance := _distance_to_player()
-	if _diag2_count < 10:
-		_diag2_count += 1
-		print("DIAG2 approach #%d self_pos=%s player_pos=%s dist=%s aggro=%s velocity=%s" % [
-			_diag2_count, global_position, player.global_position, distance, aggro_range_px(), velocity,
-		])
 	if distance > aggro_range_px():
 		state = State.IDLE
 		velocity.x = 0.0
