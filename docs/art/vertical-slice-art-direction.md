@@ -83,8 +83,12 @@ masses at a glance: a **chamber** (the resonating volume), a **frame** (what hol
 the Verse-bearer read as one world. It is also what makes the two husks read as *one rule with
 two values* rather than two unrelated monsters (§7) — the slice's H6 lives or dies here.
 
-**R3 — Silhouette test.** Fill the sprite 100% black, view at ×1 (i.e. 1/3 of display size),
-and it must still be identifiable as which entity it is. If two entities are confusable under
+**R3 — Silhouette test, at shipping size.** Fill the sprite 100% black, **resampled to its
+authored canvas size** (64 × 72, 32 × 48, …), and it must still be identifiable as which entity
+it is. The size is not a detail of the test — it *is* the test. A concept render judged at 1792 px
+tells you nothing: masses that are distinct at that size fuse at 64 px, and interior features
+vanish entirely. A mass that only exists inside the outer contour is not one of the three masses
+R2 counts, because the silhouette test cannot see it. If two entities are confusable under
 that test, the one with less claim to the shape changes. Run this before any interior detail is
 painted; detail cannot rescue a silhouette.
 
@@ -104,6 +108,11 @@ and pipeline are most likely to drift into:
 - Hollow Knight's specific language: the pale masked face, the two-horn head silhouette, cloak
   with a torn scalloped hem, ink-wash rendering, the black-void-with-white-eyes read.
 - Crisp ink outlines, uniform 1-px contour lines, cel-shaded hard terminators.
+- **Faces.** No entity in the slice has one — not the Listener, not the husks, not the
+  Verse-bearer. This is the easiest motif to arrive at by accident, because a slit under a curved
+  form is a face to human perception before it is anything else. A test that catches it: if an
+  aperture has any framing form above *or* below it, or sits on the object's axis of symmetry,
+  it will read as an eye. Remove the framing, break the symmetry.
 - Skulls, ribcages read as ribcages, and generic bone-gothic ossuary dressing. Our creatures are
   *instruments that died*, not *bodies that died*. A rib-like form must first be a frame member.
 - Literal readable sheet music, real clefs, real staves, real notation glyphs. Our etchings are
@@ -207,10 +216,16 @@ turned down" and "there is no light yet," and it is the whole point of §7 of th
 
 ### Usage rules
 
-- **Brass budget.** Brass occupies **≤ 4% of the pixels** of any authored screen. It is the
-  accent that means *sound is alive*; at 10% it means nothing. `warmth_check.py` enforces the
-  ceiling from the cold-state side (≤ 6% of pixels above the chroma floor, and that share must
-  be brass).
+- **Brass budget: ≤ 4% of a composed screen, measured at `w = 0`.** It is the accent that means
+  *sound is alive*; at 10% it means nothing. `warmth_check.py` enforces the ceiling from the
+  cold-state side (≤ 6% of pixels above the chroma floor, and that share must be brass).
+  Three qualifications the first draft left out, each of which made the rule mis-apply:
+  - It is a **screen** budget, not a per-asset one. A single brass fitting is 40% of its own
+    sprite and that is fine; what matters is how much brass is in frame.
+  - It is measured at **`w = 0`**. After restoration the room is *supposed* to be full of lit
+    metal — that is the payoff the whole slice is built toward.
+  - The **restored Verse-bearer is exempt entirely.** It is the light source. Capping the one
+    asset whose job is to blaze is the rule eating its own purpose.
 - **`BR4` and `SM0–2` are emissive colours.** They may not appear in a cold-state authored
   asset at all. An artist who needs a bright accent in the cold state has misread the brief.
 - **`WX3` is the value ceiling.** Nothing non-emissive goes brighter. It exists to make the one
@@ -266,6 +281,33 @@ Brass takes a different path on purpose, and that difference *is* the "dormant m
 
 Which gives the one-line rule: **in the cold state the world's warmth lives in *reflectance*
 only; not one pixel of it is *emitted*.** Dormant metal, not absent metal.
+
+### 4.1b State versus warmth — what "derived" does and does not cover
+
+The derive rule governs the **warmth axis only**. It does not mean an entity gets exactly one
+authored image.
+
+An entity that changes *state* — geometry, material occupancy, what is open or closed, what is
+present or absent — gets one authored source **per state**, and every one of those sources is
+authored warm. The §4.1 transform then runs over whichever state is on screen.
+
+The Verse-bearer is the case that forces the distinction, so it is worth naming concretely:
+
+- `versebearer_dormant` — closed aperture, dust, crack as `VD0` void, fittings dull but still
+  brass. Authored warm; displayed at `w = 0` before restoration, and that is where its cold read
+  comes from.
+- `versebearer_restored` — open aperture, emissive seam, etchings. Authored warm; only ever
+  displayed at `w = 1`.
+
+Two states, two warm sources, one derive. What is **not** permitted is hand-painting a cold
+appearance. The moment cold is authored, the palette's cold column and the shader stop agreeing,
+and the only place that disagreement surfaces is the §4.4 gate or a playtest.
+
+**Corollary: dormant brass is dull brass, not verdigris.** Cold `BR1`/`BR2` derive to `#514936`
+and `#7a7153` — desaturated olive-brown *metal*. Verdigris (`BZ2`, `#6f8f74`) is a different
+material: a copper corrosion product with its own story about age and neglect. Substituting it
+for cold brass breaks the dormant-metal claim at the root, because the player must see the same
+metal unlit and then lit, not one metal swapped for another.
 
 ### 4.2 The warmth field
 
@@ -468,13 +510,51 @@ slice's art rules — flagged in §12.
 
 ## 8. The Verse-bearer
 
-The slice's thesis in one asset. 64 × 72 px, seated in the amphitheatre's focus.
+The slice's thesis in one asset. 64 × 72 px, seated in the amphitheatre's focus. It is the
+game's **sacred** bell, and the only bell in the slice — see §9.2.
 
-**Cold state.** Matte, cracked, silent-grey. Built from the shared three-mass grammar at a
-larger scale: a great bell-chamber body, a stone frame that has partly become the amphitheatre
-around it, a closed aperture. Palette: `ST1`/`ST2` body with `WX0` dust, `BZ0`/`BZ1` fittings,
-`HK2` collapsed membrane across the aperture. Its brass fittings follow the dormant-metal rule —
-visibly metal, visibly unlit. The crack is `VD0`: a hole, not a dim light.
+**The arch is not part of this sprite.** The niche the bearer sits in is *architecture*: it
+belongs to the `stone` tileset, authored as a niche the bearer is placed into. Baked into a
+64 × 72 sprite it cannot be composed against a tileset, and — worse — its legs touch the
+chamber's shoulders, which fuses frame and chamber into one hooded contour and destroys the
+three-mass read at shipping size. The bearer's own three masses are **chamber**, **frame ribs**,
+**aperture**, all within its own 64 × 72.
+
+**Dormant state.** Matte, cracked. Authored warm per §4.1b; its cold read is the derive's output,
+never hand-painted.
+
+| part | palette | note |
+|---|---|---|
+| Chamber body | `ST1`/`ST2` | 2+ cold steps below the `ST3`/`ST4` field it sits on (§10) |
+| Fracture lip | `ST4` | see below — this is what makes the wound visible |
+| Crack core | `VD0` | ≥ 2 px wide at 64 × 72 |
+| Frame ribs | `ST2`, `BZ1` collars | |
+| Fittings | `BR1`/`BR2` — **brass** | formed hardware: a band, a lug, a bolt seat |
+| Dust | `WX0` | pooled where the form is horizontal |
+| Collapsed membrane | `HK2` | behind the aperture, not across it |
+
+Two corrections to an earlier version of this table, both of which caused real defects in the
+first asset batch and were mine, not the artist's:
+
+- It specified `BZ0`/`BZ1` fittings and then called them "brass fittings" in the next sentence.
+  `BZ` is **bronze**, whose verdigris is a copper corrosion product — a different material with
+  its own story. The fittings are `BR`. Dormant brass derives to `#514936`/`#7a7153`, a
+  desaturated olive-brown *metal*; it does not derive to green. Substituting verdigris teaches
+  the player that the game's "this matters, and it is asleep" colour is the same colour as the
+  membrane's corroded hoop, which is the one thing brass must never be confused with.
+- It made the crack `VD0` against an `ST1`/`ST2` body. That is 0.074 luma apart after the cold
+  derive — under one step, invisible at 64 × 72. **The crack is read by its lip, not by its
+  core:** an `ST4` fracture edge along one side, which is 0.319 clear of the body, and which is
+  materially true — a fracture exposes fresh stone, and fresh stone is brighter than a weathered
+  face. The dormant wound then reads as a bright line that the restored seam lights up *along*.
+  If the wound is only visible once it glows, the player learns that a crack appeared when it
+  lit — not that the wound and the voice are the same thing, which is the entire claim.
+
+**The aperture is a hard-edged void in the chamber wall.** No lid, no brow, no crescent beneath
+it, no soft forms framing it, and no horizontal symmetry: a slit centred under a symmetrical
+arc is a face, and it will be read as one before it is read as an opening. An aperture is a
+*cut* — a port, a slot, a mouth-hole in a pipe. It is the one place in this asset where §2 R1's
+"straight edges only where something was cut" applies literally.
 
 **The crack geometry is authored once, as a single continuous path**, from the lower chamber up
 across the aperture and over the shoulder of the bell. It is the same path in both states — this
@@ -531,14 +611,23 @@ symbol.** No icons, no glyph hints, no outline pulse, no "?" marker. The world s
 | | Slack (default) | Taut (sustaining) |
 |---|---|---|
 | Form | catenary sag, 5 px deep at centre, across a `BZ1` bronze hoop | flat, 1 px crown, hoop rim visibly loaded |
-| Palette | `HK2` skin, `HK0` in the sag, `BZ0`/`BZ1` hoop | `HK3` skin, `BZ2` hoop, `ST4` hoop specular |
+| Palette (both authored **warm**, §4.1b) | `HK2` skin, `HK0` in the sag, `BZ0`/`BZ1` hoop | `HK3` skin, `BZ2` hoop, `BZ3` hoop specular |
 | Size | 64 × 20 px (hoop 64 px across) | same footprint, skin raised to the hoop plane |
 | Read | "a drum nobody has tightened" | "a floor" |
+| Sag | off-centre and asymmetric — deepest point ~⅓ across, never at the middle | — |
+
+`HK2` → `HK3` between the two rows is a **state** difference, not a warmth one: a tightened skin
+catches light differently from a slack one. Both rows are authored warm and both are then run
+through the §4.1 derive. This table is legal under §4.1b; §9.2's was not (see there).
+
+A centred circular depression with its darkest value at the middle reads as a hole at 64 × 20,
+whatever its depth — which is why the sag is specified off-centre. "Shallower" does not fix a
+basin; asymmetric does.
 
 Three affordance cues, all diegetic, all present before the player owns Sustain:
 
 1. **The hoop is a tension mechanism, visibly.** Lugs and a tensioning collar around the rim,
-   worn bright at the contact points (`ST4` on `BZ1`) — evidence this has been tightened many
+   worn bright at the contact points (`BZ3` on `BZ1`) — evidence this has been tightened many
    times. A mechanism that shows wear shows that it moves.
 2. **Sympathetic tremble.** Within 140 px of the player and *not* sustaining, the skin carries a
    1 px, 3-frame, low-amplitude tremble on a 900 ms cycle. It is already answering the world's
@@ -553,11 +642,25 @@ one frame ahead of the player's fall, so the cause is visible.
 
 ### 9.2 Bell-frame (suspended, descends while sustaining)
 
+**The bell-frame is a frame of tuned bronze tubes, not a cast hand bell.** The name stays — it is
+the mechanic's name in the playable contract (design spec §4.1) and does not change. The body
+does. A six-asset set cannot contain two bells: the Verse-bearer is the game's *sacred* bell, and
+a prop sharing its silhouette spends that meaning on a platform. Tubular bells are inside the
+approved vocabulary ("bell-frames, pipe-organ colonnades"), give a completely different vertical
+silhouette, and visually rhyme with R5's colonnade instead of competing with R6's bearer.
+
 | | High (default) | Low (sustaining) |
 |---|---|---|
-| Form | a bell mouth-down in a `BZ1` yoke, suspended from a guide rail | same, at the bottom of its travel |
-| Palette | `BR1`/`BR2` bell (dormant cold), `BZ1` yoke, `ST2` rail | `BR2`/`BR3` bell, `BR4` only if `w > 0` |
+| Form | 4–5 tuned tubes of stepped length hanging mouth-down in a `BZ1` yoke, on a guide rail | same, at the bottom of its travel; the yoke is the surface the player stands on |
+| Palette — **authored warm in both rows** | `BR2`/`BR3` tubes, `BZ1` yoke, `ST2` rail | identical source; `BR4` legal only where `w > 0` |
 | Size | 40 × 48 px |  |
+
+**Both rows carry the same brass values, and that is the correction.** High vs low is a change of
+*position*, not of material. The earlier version of this table said `BR1`/`BR2` "(dormant cold)"
+for the high state, which is a display value written into a source table — under §4.1b there is
+no authored cold, so an asset built to that row gets darkened twice and the dormant tubes sink
+below the stone they hang on. Every palette cell in this document is a **source** value; the cold
+appearance is always the derive's output and never an authoring instruction.
 
 Affordance cues:
 
@@ -582,7 +685,7 @@ and wired in LDtk. A room is composed from families; it does not get bespoke til
 
 | Family | Palette | Where |
 |---|---|---|
-| `stone` — amphitheatre travertine | `ST0–ST4` | everywhere; the base material |
+| `stone` — amphitheatre travertine | `ST0–ST4` | everywhere; the base material. Includes **the R6 niche** the Verse-bearer is placed into — the arch is tileset architecture, not part of the bearer's sprite (§8) |
 | `plaster` — cracked wax-plaster facing | `WX0–WX3` + `ST1` substrate | R2, R6, R7 |
 | `colonnade` — pipe-organ columns, fluted, hollow | `ST2–ST4`, `BZ1` collars, `BR1` dormant mouth-holes | R5 |
 | `terracotta` — fired tile facing, seating risers | `TC0–TC3` | R3, R4, R6 (the transition workhorse) |
@@ -590,6 +693,41 @@ and wired in LDtk. A room is composed from families; it does not get bespoke til
 
 Budget: **5 families × 47 tiles = 235 base tiles**, plus ~40 decoration tiles and 2 parallax
 backdrop layers. Anything above that is scope the slice did not ask for.
+
+**Field value spread — a local cap and an absolute floor.** Both are required; the local cap
+alone is not enough, because a field can satisfy it perfectly and still drift across the
+Listener's value over eight tiles.
+
+- *Local cap.* Adjacent tiles vary by **at most one ramp step** (`ST3` beside `ST2` or `ST4`;
+  never `ST1` beside `ST4`).
+- *Absolute floor.* **The tiled field is `ST3`/`ST4` only.** `ST0`–`ST2` are for features,
+  joints, crevices and cast shadow — never for field.
+
+The floor is derived from the palette rather than picked. The Listener's dark wrap is `HK1`, and
+the two-step separation §2 R4 requires is measured **after the cold derive**, because the cold
+transform compresses the ramp from a 0.126 mean step to 0.098 and eats the margin:
+
+| field tile | Δluma vs `HK1`, warm | Δluma vs `HK1`, cold | verdict |
+|---|---|---|---|
+| `ST1` | +0.011 | +0.009 | **invisible** — the wrap and the tile are the same value |
+| `ST2` | +0.134 | +0.103 | one step. Fails R4. |
+| `ST3` | +0.273 | +0.213 | ≥ 2 cold steps — **floor** |
+| `ST4` | +0.421 | +0.328 | clear |
+
+In luma terms the field sits at **≥ 0.474 in its cold state** (`ST3` cold), ≥ 0.549 warm.
+
+Two consequences worth stating, because both are the kind of thing an asset pass discovers late:
+
+- **The Listener's read is carried by its dark mass.** `WX0` clears nothing in the legal field
+  band (−0.077 against `ST2`, +0.063 against `ST3`, and it merges with `ST4`). `WX0`/`WX1` are
+  interior lights only and must never be what forms the silhouette edge against stone.
+- **Check separation in the cold state, not the warm one.** Every margin in this document is
+  tighter after the derive. An asset that clears R4 warm and fails it cold has not passed.
+
+**Joint regularity.** Joints are irregular, and tile sizes vary within a family. A surface whose
+joints form an unbroken regular grid reads as manufactured tiling — the wrong material story for
+a place that has been standing and weathering. A uniform dark grout line is a contour line by
+another name (§2 R4), whatever it is called.
 
 ### What each room's art must do
 
@@ -677,10 +815,21 @@ Recorded so the Game Designer and Creative Director can correct them cheaply.
 3. **Sound-off play is not viable in this slice, by design** (§7.3). A permanent accessibility
    affordance for the tell is a real question deferred to the post-play list; adding a timing
    readout now would pre-falsify H2.
-4. **Not decided here:** the full art bible, any biome outside this zone, the Verse-bearer's
+4. **The Verse-bearer does not adopt the veiled-figure reading, and I am not raising a Creative
+   Checkpoint to decline it.** Batch 1's concept read as a shrouded figure with one closed eye —
+   a lid and brow above a horizontal slit, a crescent below it, an arch reading as a hood, a
+   flared skirt reading as draped shoulders. A sacred object shaped like a veiled figure, whose
+   story beat is being cracked open and restored, is a genuinely good idea and exactly the kind
+   of thing that must be *chosen*. It arrived from a prompt, which is the one way it must not
+   arrive. Removing it enforces the forbidden-motif list and the approved pillar that this world
+   is instruments rather than bodies, so the correction needs no approval — **adopting** it would
+   be the Checkpoint, and that gate stays available to the Creative Director if they want the
+   reading on purpose. Recorded here so the decision is visible and cheap to reverse rather than
+   silently absorbed into the next asset.
+5. **Not decided here:** the full art bible, any biome outside this zone, the Verse-bearer's
    species or history, husk variants beyond these two, a second Verse's seam colour, character
    portraits, key art, logo, or anything about the game's second zone.
-5. **Open dependency:** the etching spline paths (§8) should ideally rhyme with the shape of
+6. **Open dependency:** the etching spline paths (§8) should ideally rhyme with the shape of
    Audio's unfinished leitmotif phrase. That is a nice-to-have cross-discipline alignment, not a
    blocker — the etchings ship without it if Audio's phrase is not fixed in time.
 
@@ -707,7 +856,9 @@ Priority is ordered by what the slice cannot be evaluated without.
 | 10 | Decoration + parallax | — | ~40 tiles, 2 layers | room composition |
 
 **Gate order:** Asset Artist produces → returns to Art Director → Art Director routes to Visual
-Identity Critic → critic passes or returns findings → integration. Placeholder art is already
+Identity Critic → critic passes or returns findings → integration. §14 sets what a generated
+candidate must be before it is reviewable at all — check it first, since an unreviewable
+candidate wastes the gate rather than passing or failing it. Placeholder art is already
 unblocking engineering (design spec §12), so the critic gate is not to be shortened to save
 time.
 
@@ -718,9 +869,52 @@ time.
 3. Three-mass read (§2 R2) is identifiable and nameable.
 4. Two-palette-step value separation from its intended background (§2 R4).
 5. Violates nothing in §2's forbidden-motif list.
-6. Brass ≤ 4% of pixels; no `BR4` or `SM*` in a cold-state asset.
+6. Brass within the §3 budget — a **screen** measure at `w = 0`, not a per-asset one; the
+   restored Verse-bearer is exempt. No `BR4` or `SM*` in any asset's dormant state.
 7. Cold state, when derived by the §4.1 transform, still reads correctly — check it, do not
    assume it.
 8. For the husks: a reviewer who has not read this document can state the "short aperture =
    short lead, long aperture = long lead" rule from the two silhouettes alone (§7.2).
 9. For anything on a design-spec timing: frame count matches the contract in §11.1.
+
+---
+
+## 14. Concept renders — what a generated candidate must be
+
+The image provider available to this project cannot emit indexed pixel art, exact canvas sizes,
+autotile adjacency or frame sequences. That is a normal pipeline — generated concepts establish
+identity, material and silhouette; an Aseprite pass authors the shipping asset. It only works if
+the concept is a **faithful low-fidelity preview of the shipping asset** rather than an
+illustration of the same subject. Batch 1 failed this in six different ways, none of them the
+artist's judgement and most of them traceable to rules this document had not written down.
+
+A candidate is reviewable when all of the following are true. A candidate that is not reviewable
+should be returned before anyone forms an opinion about whether it is good.
+
+1. **Flat value steps, not gradients.** Posterise each material to its ramp (5 steps for `ST`, 4
+   for `TC`/`BZ`/`HK`, …) before submitting. A smooth gradient that reads as volume at 1792 px
+   collapses into two or three bands at 64 px, and *which* two is the entire design decision. §13
+   item 4 asks for a two-step separation; it cannot be checked against a gradient, because a
+   gradient has no steps. This is also what makes "detail lives in wear" checkable: an asset
+   whose form is carried by a smooth ramp has demonstrated a silhouette and a colour scheme, and
+   has not demonstrated a material.
+2. **Flat orthogonal projection.** No perspective, no isometric, no three-quarter view. The game
+   is a flat side-on 2D renderer (§1).
+3. **No staging.** No cast shadow, no floor plane, no backdrop, no product-shot lighting. Ground
+   the subject on flat `VD1`. Staging lends a candidate atmosphere that the sprite will not have,
+   and that borrowed atmosphere is indistinguishable from the asset being good.
+4. **Authored warm, never pre-cooled** (§4.1b). A candidate rendered in its cold appearance has
+   baked the derive into the source, and running the transform over it darkens it twice.
+5. **The sheet carries its own shipping-size proof.** Every candidate is submitted with two
+   extra panels beside the full-size render: the candidate resampled to its authored canvas
+   (64 × 72, 40 × 48, …), and that resample at 100% black fill. §2 R3 is a test at shipping size;
+   a sheet without those panels cannot be reviewed against it, and both of batch 1's silhouette
+   failures were invisible until someone made them.
+6. **One render language per batch.** Whatever the handling is — painterly wear, flat steps — it
+   is the same across every asset in the set. Batch 1 contained three, which meant approving any
+   two of them approved two incompatible answers to "what is a surface in this world."
+
+Rule 6 is the one worth defending hardest, because it is the only one that cannot be fixed
+downstream. A projection error or a pre-cooled palette is a re-render. A set that has quietly
+agreed on two surface languages is a style decision nobody made, and it gets more expensive to
+reverse with every asset added to it.
