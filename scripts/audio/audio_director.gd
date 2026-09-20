@@ -57,7 +57,12 @@ var breath_remaining: float = 1.0            # global, 1 -> 0
 var encounter_phrase_length: int = 0         # R6
 var encounter_note_index: int = 0            # R6
 
-var _open_tell_count: int = 0  # duck source count — only real TELL-bus opens, never the bearer's
+## Duck sources: real TELL-bus opens only, keyed by emitter instance id so
+## closing is idempotent regardless of *how* an emitter closes — a resolved
+## Answer, a missed window, or the enemy dying mid-tell (Strike-kill) all
+## remove the same id exactly once, rather than a delta counter that a
+## freed-without-signal emitter could leave permanently incremented.
+var _open_duck_emitters: Dictionary = {}
 var _duck_tween: Tween
 
 var _amb_cold_player: AudioStreamPlayer
@@ -163,16 +168,36 @@ func play_tell(emitter: TellEmitter) -> void:
 		# Only real TELL-bus opens are a duck source (§2) — the bearer's
 		# notes are deliberately not TELL and must not duck anything by
 		# virtue of merely being a tell.
-		_open_tell_count += 1
-		if _open_tell_count == 1:
+		var was_silent := _open_duck_emitters.is_empty()
+		_open_duck_emitters[emitter.get_instance_id()] = true
+		if was_silent:
 			_start_duck()
-		emitter.tell_resolved.connect(_on_tell_closed.bind(emitter), CONNECT_ONE_SHOT)
-		emitter.tell_missed.connect(_on_tell_closed.bind(emitter), CONNECT_ONE_SHOT)
+		_wire_duck_release(emitter)
 
 
-func _on_tell_closed(_emitter: TellEmitter) -> void:
-	_open_tell_count = maxi(0, _open_tell_count - 1)
-	if _open_tell_count == 0:
+## An emitter is reused across many tells over its lifetime (a Reed Husk
+## opens dozens), so a stale one-shot connection from a *previous* tell that
+## closed by the other path (e.g. tell_missed fired, so the tell_resolved
+## one-shot from that round never auto-disconnected) must be cleared before
+## reconnecting, or the repeat connect() on the same signal/callable errors.
+func _wire_duck_release(emitter: TellEmitter) -> void:
+	var callback := _on_tell_closed.bind(emitter)
+	for sig in [emitter.tell_resolved, emitter.tell_missed, emitter.tree_exiting]:
+		if sig.is_connected(callback):
+			sig.disconnect(callback)
+		sig.connect(callback, CONNECT_ONE_SHOT)
+
+
+## Fires on a resolved Answer, a missed window, OR the emitter leaving the
+## tree (an enemy dying mid-tell, e.g. a Strike-kill) — whichever happens
+## first. Keyed removal makes this safe to call more than once for the same
+## emitter: the second call is a no-op rather than an under/over-count.
+func _on_tell_closed(emitter: TellEmitter) -> void:
+	var id := emitter.get_instance_id()
+	if not _open_duck_emitters.has(id):
+		return
+	_open_duck_emitters.erase(id)
+	if _open_duck_emitters.is_empty():
 		_release_duck()
 
 
@@ -203,7 +228,7 @@ func _release_duck() -> void:
 
 
 func is_ducking() -> bool:
-	return _open_tell_count > 0
+	return not _open_duck_emitters.is_empty()
 
 
 # --- Verse drone (VerseLowDroneRestored) — save/load silence ---------------
@@ -225,15 +250,13 @@ func _build_ambience_players() -> void:
 	_amb_cold_player.stream = AmbColdStream
 	_amb_cold_player.bus = BUS_AMB
 	_amb_cold_player.volume_db = 0.0
-	if _amb_cold_player.stream is AudioStreamWAV:
-		_amb_cold_player.stream.loop_mode = AudioStreamWAV.LOOP_FORWARD
+	_configure_seamless_loop(_amb_cold_player.stream)
 
 	_amb_warm_player = AudioStreamPlayer.new()
 	_amb_warm_player.stream = AmbWarmStream
 	_amb_warm_player.bus = BUS_AMB
 	_amb_warm_player.volume_db = -80.0
-	if _amb_warm_player.stream is AudioStreamWAV:
-		_amb_warm_player.stream.loop_mode = AudioStreamWAV.LOOP_FORWARD
+	_configure_seamless_loop(_amb_warm_player.stream)
 
 	add_child(_amb_cold_player)
 	add_child(_amb_warm_player)
@@ -244,6 +267,19 @@ func _build_ambience_players() -> void:
 	# across R6 -> R5 -> R4 actually requires.
 	_amb_cold_player.play()
 	_amb_warm_player.play()
+
+
+## Both reference beds ("seamless loop", per the doc) import with
+## loop_mode already enabled but loop_end left at 0 — a zero-length forward
+## loop that never actually sounds. loop_begin/loop_end are sample frames,
+## not seconds, so this is derived from the stream's own length rather than
+## a hard-coded frame count that would silently go stale if the asset
+## changes.
+func _configure_seamless_loop(stream: AudioStream) -> void:
+	if stream is AudioStreamWAV:
+		var wav := stream as AudioStreamWAV
+		wav.loop_mode = AudioStreamWAV.LOOP_FORWARD
+		wav.loop_end = int(round(wav.get_length() * wav.mix_rate))
 
 
 ## Called by ZoneManager.travel() on every room transition, and by the

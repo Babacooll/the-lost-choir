@@ -12,7 +12,7 @@ const MembraneScene := preload("res://scenes/world/membrane.tscn")
 
 func before_each() -> void:
 	GameState.restoration_complete = false
-	AudioDirector._open_tell_count = 0
+	AudioDirector._open_duck_emitters.clear()
 	AudioDirector.verse_low_drone_restored = false
 	AudioDirector._amb_target_warm = false
 	if AudioDirector._duck_tween != null and AudioDirector._duck_tween.is_valid():
@@ -29,7 +29,7 @@ func before_each() -> void:
 
 func after_each() -> void:
 	GameState.restoration_complete = false
-	AudioDirector._open_tell_count = 0
+	AudioDirector._open_duck_emitters.clear()
 
 
 ## --- 1. Bus topology (contract §1) -----------------------------------------
@@ -74,6 +74,46 @@ func test_duck_releases_after_the_tell_closes() -> void:
 		var idx := AudioServer.get_bus_index(bus_name)
 		assert_almost_eq(AudioServer.get_bus_volume_db(idx), 0.0, 0.5,
 			"%s should have released back to 0 dB once the tell closes" % bus_name)
+
+
+## Reviewer's finding 2: EnemyBase._die() frees the emitter without firing
+## tell_resolved or tell_missed, which previously left the duck counter
+## stuck above zero — the whole mix permanently -6dB down after any
+## Strike-kill mid-tell. tree_exiting must close the duck source too.
+func test_ducking_releases_when_the_emitter_dies_mid_tell() -> void:
+	var emitter := TellEmitter.new()
+	add_child(emitter)  # not autofree — freed explicitly below, mid-tell
+	emitter.open_tell(5000.0, "percussive")  # long lead: still open when killed
+
+	await get_tree().create_timer(0.06).timeout
+	assert_true(AudioDirector.is_ducking(), "should be ducking while the tell is open")
+
+	emitter.queue_free()
+	await get_tree().create_timer(0.06).timeout  # past tree_exiting + release start
+
+	assert_false(AudioDirector.is_ducking(),
+		"a dead emitter must not leave the mix permanently ducked")
+
+
+## Reviewer's non-blocking note: an emitter is reused across many tells over
+## its lifetime, so a stale one-shot connection left over from a *different*
+## close path (e.g. tell_missed fired last round, so that round's unused
+## tell_resolved one-shot never auto-disconnected) must not error on the
+## next open_tell()'s reconnect.
+func test_a_reused_emitter_does_not_error_on_repeated_tells() -> void:
+	var emitter := TellEmitter.new()
+	add_child_autofree(emitter)
+
+	emitter.open_tell(50.0, "percussive")
+	await get_tree().create_timer(0.09).timeout  # let it close via tell_missed
+	assert_false(AudioDirector.is_ducking())
+
+	emitter.open_tell(50.0, "percussive")  # same emitter, second tell
+	await get_tree().create_timer(0.02).timeout
+	assert_true(AudioDirector.is_ducking(), "the second tell on the same emitter should still duck")
+
+	emitter.resolve(0.0)  # close it the *other* way this time
+	assert_false(AudioDirector.is_ducking())
 
 
 func test_the_bearers_note_does_not_duck_anything() -> void:
@@ -143,6 +183,18 @@ func test_a_flag_already_true_at_boot_snaps_silently_no_swell() -> void:
 	assert_almost_eq(AudioDirector._amb_warm_player.volume_db, 0.0, 0.01,
 		"loading a restored save must start warm with the interval already present, instantly")
 	assert_almost_eq(AudioDirector._amb_cold_player.volume_db, -80.0, 0.01)
+
+
+## Reviewer's finding 1: both reference beds import with looping enabled but
+## loop_end left at 0 — a zero-length forward loop that never actually
+## sounds, silently voiding the checkpoint's main audible deliverable.
+func test_ambience_streams_have_a_real_nonzero_loop_region() -> void:
+	for player in [AudioDirector._amb_cold_player, AudioDirector._amb_warm_player]:
+		var wav := player.stream as AudioStreamWAV
+		assert_not_null(wav)
+		assert_eq(wav.loop_mode, AudioStreamWAV.LOOP_FORWARD)
+		assert_gt(wav.loop_end, 0, "loop_end must cover the actual sample length, not the zero-length default")
+		assert_almost_eq(wav.loop_end, int(wav.get_length() * wav.mix_rate), 1)
 
 
 ## --- 5. Leitmotif is zone-scoped, never restarted by a room transition -----
