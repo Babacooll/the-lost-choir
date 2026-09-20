@@ -18,6 +18,9 @@ const ENCOUNTER_SCENES := {
 	"verse_bearer_r6": VerseBearerScene,
 }
 
+const MembraneScene := preload("res://scenes/world/membrane.tscn")
+const BellFrameScene := preload("res://scenes/world/bell_frame.tscn")
+
 # How far, horizontally, an arriving player is pushed clear of the door
 # trigger they just arrived through — big enough to clear the trigger's own
 # 16 px width plus the player's 18 px collider, so gravity settling them
@@ -86,6 +89,10 @@ func _build_from_ldtk() -> void:
 		_maybe_spawn_encounter(marker, LDtkProject.get_field(entity, "encounter_id", "unnamed"))
 	for entity in LDtkProject.get_entities(level, "FragmentMarker"):
 		_build_marker(entity, "fragment_id", "FragmentMarker")
+	for entity in LDtkProject.get_entities(level, "Membrane"):
+		_build_world_object(entity, MembraneScene)
+	for entity in LDtkProject.get_entities(level, "BellFrame"):
+		_build_world_object(entity, BellFrameScene)
 	for entity in LDtkProject.get_entities(level, "Door"):
 		_build_door(entity)
 
@@ -112,6 +119,19 @@ func _build_solid_rect(entity: Dictionary) -> void:
 		Vector2(half.x, half.y), Vector2(-half.x, half.y),
 	])
 	body.add_child(visual)
+
+## §4.1 world objects (Membrane, BellFrame): px is the entity's top-left
+## footprint, same convention as SolidRect — the spawned node's own position
+## is that footprint's centre, matching both scenes' collision shapes (which
+## are centred on the node with no offset).
+func _build_world_object(entity: Dictionary, scene: PackedScene) -> void:
+	var pos := LDtkProject.entity_position(entity)
+	var width: float = entity.get("width", 16.0)
+	var height: float = entity.get("height", 16.0)
+	var instance: Node2D = scene.instantiate()
+	instance.position = pos + Vector2(width, height) * 0.5
+	add_child(instance)
+
 
 func _build_marker(entity: Dictionary, field_id: String, group_name: String) -> Marker2D:
 	var marker := Marker2D.new()

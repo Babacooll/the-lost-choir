@@ -1,0 +1,18 @@
+[gd_scene load_steps=3 format=3 uid="uid://c8m1r4n0k5x3w"]
+
+[ext_resource type="Script" path="res://scripts/world/membrane.gd" id="1_membrane"]
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_membrane"]
+size = Vector2(64, 8)
+
+[node name="Membrane" type="StaticBody2D"]
+script = ExtResource("1_membrane")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+shape = SubResource("RectangleShape2D_membrane")
+one_way_collision = true
+disabled = true
+
+[node name="Visual" type="Polygon2D" parent="."]
+color = Color(0.5, 0.3, 0.45, 0.85)
+polygon = PackedVector2Array(-32, -4, 32, -4, 32, 4, -32, 4)

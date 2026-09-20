@@ -41,8 +41,10 @@ const CORNER_PROBE_MIN_LOOKAHEAD: float = 1.0
 const MAX_HP: int = 5
 
 @onready var collision_shape: CollisionShape2D = $CollisionShape2D
-# PlayerCombat is combat.gd's global class_name — no preload needed to type this.
+# PlayerCombat/PlayerSustain are combat.gd/sustain.gd's global class_names —
+# no preload needed to type these.
 @onready var combat: PlayerCombat = get_node_or_null("Combat")
+@onready var sustain: PlayerSustain = get_node_or_null("Sustain")
 
 var coyote_timer: float = 0.0
 var jump_buffer_timer: float = 0.0
@@ -97,10 +99,15 @@ func _physics_process(delta: float) -> void:
 func _apply_horizontal_movement(delta: float) -> void:
 	# Air control is 100% of ground accel — no separate air-accel constant needed.
 	var input_dir := Input.get_axis("move_left", "move_right")
+	# §4.1: run speed x0.85 while sustaining; jump is unaffected (no change
+	# here — jump velocity/gravity never reference this speed cap).
+	var max_speed := RUN_MAX_SPEED
+	if sustain != null and sustain.is_slowing_movement():
+		max_speed *= PlayerSustain.RUN_SPEED_MULT
 
 	if input_dir != 0.0:
 		facing = signf(input_dir)
-		velocity.x = move_toward(velocity.x, RUN_MAX_SPEED * input_dir, ACCEL * delta)
+		velocity.x = move_toward(velocity.x, max_speed * input_dir, ACCEL * delta)
 	else:
 		velocity.x = move_toward(velocity.x, 0.0, DECEL * delta)
 
