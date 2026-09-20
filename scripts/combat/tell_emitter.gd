@@ -1,26 +1,42 @@
 class_name TellEmitter
 extends Node2D
-## Minimal scriptable dummy tell source for checkpoint 2's combat core.
+## Tell source shared by the checkpoint-2 dummy fixture and checkpoint 3's
+## real Reed Husk / Keening Husk. A tell window opens at onset and stays
+## open until its lead time elapses (§5 shared rule 1: the Answer window
+## *is* the telegraph, no separate sub-window).
 ##
-## A tell window opens at onset and stays open until its lead time elapses
-## (§5 shared rule 1: the Answer window *is* the telegraph, no separate
-## sub-window). Checkpoint 3 replaces this with real Reed Husk / Keening Husk
-## tells driven by actual attack patterns; this node only exists so Answer has
-## something to resolve against and the debug overlay has something to plot.
-## Don't over-invest in this API — it's throwaway-shaped by design.
+## This node only tracks the window itself — onset, close, the identifying
+## transient marker, and resolution. It does not decide what "the attack
+## landing" means (damage amount, lunge vs. projectile): whoever opens the
+## tell (a real enemy, or the checkpoint-2 manual test director) listens for
+## `tell_missed` and resolves its own attack, and for `tell_resolved` to
+## enter its own stagger. That keeps this class from needing to know about
+## enemy-specific attack shapes.
+
+## §5 shared rule 2: the identifying transient — the part that tells you
+## *which* attack this is — lands in the first 160 ms of the tell.
+const IDENTIFYING_TRANSIENT_MS: float = 160.0
 
 ## Emitted the instant a window opens, with the lead time (ms) it will stay open for.
 signal tell_opened(onset_ms: float, close_ms: float)
+## Emitted once, at onset + IDENTIFYING_TRANSIENT_MS, while the window is still open.
+signal tell_transient()
 ## Emitted when PlayerCombat resolves this window with a successful Answer.
 signal tell_resolved()
 ## Emitted when the window closes without being resolved — the attack "lands".
 signal tell_missed()
+
+## Register/voice identifier ("percussive", "keening", ...), set by whoever
+## opens the tell. Purely descriptive — used for the dry-channel routing
+## hook and the debug overlay; the timing rules don't depend on it.
+var register: String = ""
 
 var lead_time_ms: float = 0.0
 var stagger_ms: float = 0.0
 
 var _open: bool = false
 var _onset_ms: float = 0.0
+var _transient_fired: bool = false
 
 
 func _ready() -> void:
@@ -39,13 +55,16 @@ func _register_with_player() -> void:
 
 
 ## Opens a new tell window with the given lead time. Re-opening while a
-## window is already open replaces it (a dummy fixture doesn't need to model
-## overlapping tells from a single emitter — that's a multi-emitter concern,
-## per §3.3's arbitration rule).
-func open_tell(p_lead_time_ms: float) -> void:
+## window is already open replaces it (a single emitter modeling two
+## overlapping tells of its own is not a case §5 describes — overlap is a
+## multi-emitter concern, per rule 6's arbitration).
+func open_tell(p_lead_time_ms: float, p_register: String = "") -> void:
 	lead_time_ms = p_lead_time_ms
+	register = p_register
 	_onset_ms = Time.get_ticks_msec()
 	_open = true
+	_transient_fired = false
+	_route_to_dry_channel()
 	tell_opened.emit(_onset_ms, close_ms())
 
 
@@ -61,9 +80,15 @@ func close_ms() -> float:
 	return _onset_ms + lead_time_ms
 
 
-## Called by PlayerCombat on a successful Answer. Stubs the §3.3 "enemy
-## staggers 900 ms" consequence as a timer on the emitter itself — real
-## enemy stagger behavior is checkpoint 3.
+## §5 shared rule 2: when the identifying transient lands within this tell.
+func transient_ms() -> float:
+	return _onset_ms + IDENTIFYING_TRANSIENT_MS
+
+
+## Called by PlayerCombat on a successful Answer. The 900 ms enemy-stagger
+## consequence (§3.3) is tracked here as a timer so any listener (the owning
+## enemy) can read it without PlayerCombat needing to know what "stagger"
+## means for a given enemy shape.
 func resolve(stagger_duration_ms: float) -> void:
 	if not _open:
 		return
@@ -72,11 +97,25 @@ func resolve(stagger_duration_ms: float) -> void:
 	tell_resolved.emit()
 
 
+## Stub attachment point for FMOD's dedicated dry tell channel (§5 shared
+## rule 4 — the tell must never share a channel with ambience/flavor
+## vocalization). Real audio is Technical Artist's later pass; this exists
+## so Reed/Keening wire into a real call site now rather than one that has
+## to be invented later.
+func _route_to_dry_channel() -> void:
+	pass
+
+
 func _physics_process(delta: float) -> void:
 	# Fixed-tick, matching every other timing-critical system in the combat
 	# core (§2: "all timings ... measured at 60 Hz fixed tick").
-	if _open and Time.get_ticks_msec() >= close_ms():
-		_open = false
-		tell_missed.emit()
+	var now := Time.get_ticks_msec()
+	if _open:
+		if not _transient_fired and now >= transient_ms():
+			_transient_fired = true
+			tell_transient.emit()
+		if now >= close_ms():
+			_open = false
+			tell_missed.emit()
 	if stagger_ms > 0.0:
 		stagger_ms = maxf(0.0, stagger_ms - delta * 1000.0)

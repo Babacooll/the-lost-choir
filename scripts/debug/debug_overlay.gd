@@ -69,4 +69,5 @@ func _process(_delta: float) -> void:
 			combat.ANSWER_PRE_WINDOW_BUFFER_MS,
 			combat.last_answer_press_ms,
 			combat.last_answer_result,
+			combat.last_tell_transient_ms,
 		)

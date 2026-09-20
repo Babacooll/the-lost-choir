@@ -1,0 +1,18 @@
+[gd_scene load_steps=3 format=3 uid="uid://dq2m8w5r1p4nz"]
+
+[ext_resource type="Script" path="res://scripts/enemies/keening_husk.gd" id="1_keening"]
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_keening"]
+size = Vector2(16, 36)
+
+[node name="KeeningHusk" type="CharacterBody2D"]
+script = ExtResource("1_keening")
+floor_stop_on_slope = true
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+position = Vector2(0, -18)
+shape = SubResource("RectangleShape2D_keening")
+
+[node name="Visual" type="Polygon2D" parent="."]
+color = Color(0.42, 0.3, 0.5, 1)
+polygon = PackedVector2Array(-8, -36, 8, -36, 8, 0, -8, 0)
