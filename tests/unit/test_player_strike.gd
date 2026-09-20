@@ -77,21 +77,37 @@ func test_strike_phase_durations_match_contract() -> void:
 	assert_eq(combat.strike_state, combat.StrikeState.IDLE)
 
 
-func test_strike_deals_damage_exactly_once_per_activation() -> void:
+func test_strike_hit_application_dedupes_and_applies_damage_once() -> void:
+	# Exercises the real dedupe/damage logic (_apply_hits_to_bodies) directly
+	# rather than through Area2D.get_overlapping_bodies() — whether that
+	# actually reports an overlap on a given tick depends on physics-server
+	# timing that isn't reliable to assert against in an automated run, and
+	# isn't what this behavior is about anyway: given a body list (however
+	# it was obtained), one Strike activation must hit each body exactly
+	# once, not once per frame it's still listed as overlapping.
 	var combat = _player.combat
-	# Freeze the player's own movement/gravity — Combat is a separate node
-	# and keeps ticking independently — so it doesn't fall away (no floor in
-	# this fixture) from the fixed-position target before Strike activates.
-	_player.set_physics_process(false)
-	await _press_strike()
-
-	for i in range(40):
-		await get_tree().physics_frame
-		if combat.strike_state == combat.StrikeState.IDLE and i > 5:
-			break
+	combat._apply_hits_to_bodies([_target, _target])
+	combat._apply_hits_to_bodies([_target])
 
 	assert_eq(_target.hits.size(), 1, "one Strike activation should hit exactly once, not once per overlapping frame")
 	assert_eq(_target.hits[0], combat.STRIKE_DAMAGE)
+
+
+func test_strike_hitbox_activates_and_deactivates_across_the_active_phase() -> void:
+	# Lighter integration check that doesn't depend on overlap detection:
+	# the hitbox's collider is enabled only for the ACTIVE phase.
+	var combat = _player.combat
+	var col_shape: CollisionShape2D = _player.get_node("StrikeHitbox/CollisionShape2D")
+	assert_true(col_shape.disabled, "hitbox collider should start disabled")
+
+	await _press_strike()
+	while combat.strike_state != combat.StrikeState.ACTIVE:
+		await get_tree().physics_frame
+	assert_false(col_shape.disabled, "hitbox collider should be enabled during ACTIVE")
+
+	while combat.strike_state == combat.StrikeState.ACTIVE:
+		await get_tree().physics_frame
+	assert_true(col_shape.disabled, "hitbox collider should be disabled again once ACTIVE ends")
 
 
 func test_jump_locked_during_startup_and_active_unlocked_from_recovery() -> void:

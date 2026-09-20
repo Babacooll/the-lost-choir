@@ -178,7 +178,14 @@ func _close_strike_hitbox() -> void:
 func _apply_strike_hits() -> void:
 	if strike_hitbox == null:
 		return
-	for body in strike_hitbox.get_overlapping_bodies():
+	_apply_hits_to_bodies(strike_hitbox.get_overlapping_bodies())
+
+
+## Split out from _apply_strike_hits() so the dedupe/damage logic is testable
+## without depending on Area2D's overlap detection actually firing inside a
+## given test run — that's environment-sensitive in ways this logic isn't.
+func _apply_hits_to_bodies(bodies: Array) -> void:
+	for body in bodies:
 		# The hitbox starts flush against the player's own collider edge, so
 		# collision margins can report it as touching/overlapping — never a
 		# real hit.
