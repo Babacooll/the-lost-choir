@@ -67,6 +67,25 @@ func test_room_builds_solid_geometry_doors_and_markers_from_ldtk() -> void:
 	assert_eq(get_tree().get_nodes_in_group("EnemyMarker").size(), 2, "R2 has a passive husk and one Reed Husk marker (§6)")
 
 
+func test_r6_encounter_marker_spawns_the_restoration_encounter() -> void:
+	# §7's Verse-bearer lives on R6's EncounterMarker (encounter_id
+	# "verse_bearer_r6") — this is the wiring the marker was built for, not
+	# just an inert placeholder.
+	var room := preload("res://scenes/levels/R6_ColdAmphitheater.tscn").instantiate()
+	add_child_autofree(room)
+	await get_tree().physics_frame
+
+	var markers := get_tree().get_nodes_in_group("EncounterMarker")
+	assert_eq(markers.size(), 1, "R6 has exactly one restoration encounter marker (§7)")
+
+	var found_encounter := false
+	for marker in markers:
+		for child in marker.get_children():
+			if child is RestorationEncounter:
+				found_encounter = true
+	assert_true(found_encounter, "R6's EncounterMarker should spawn a real RestorationEncounter, not stay inert")
+
+
 func test_gated_door_is_closed_until_restoration_flag_is_set() -> void:
 	var room := preload("res://scenes/levels/R4_MembraneHall.tscn").instantiate()
 	add_child_autofree(room)

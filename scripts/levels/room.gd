@@ -11,6 +11,13 @@ const SOLID_COLOR := Color(0.32, 0.29, 0.36, 1.0)
 const GATED_DOOR_COLOR := Color(0.55, 0.4, 0.2, 1.0)
 const OPEN_DOOR_COLOR := Color(0.6, 0.6, 0.7, 0.35)
 
+const VerseBearerScene := preload("res://scenes/encounters/verse_bearer.tscn")
+# EncounterMarker.encounter_id -> scene to spawn on it. Only R6's restoration
+# encounter exists this checkpoint; other encounter ids stay inert markers.
+const ENCOUNTER_SCENES := {
+	"verse_bearer_r6": VerseBearerScene,
+}
+
 # How far, horizontally, an arriving player is pushed clear of the door
 # trigger they just arrived through — big enough to clear the trigger's own
 # 16 px width plus the player's 18 px collider, so gravity settling them
@@ -75,7 +82,8 @@ func _build_from_ldtk() -> void:
 	for entity in LDtkProject.get_entities(level, "EnemyMarker"):
 		_build_marker(entity, "enemy_type", "EnemyMarker")
 	for entity in LDtkProject.get_entities(level, "EncounterMarker"):
-		_build_marker(entity, "encounter_id", "EncounterMarker")
+		var marker := _build_marker(entity, "encounter_id", "EncounterMarker")
+		_maybe_spawn_encounter(marker, LDtkProject.get_field(entity, "encounter_id", "unnamed"))
 	for entity in LDtkProject.get_entities(level, "FragmentMarker"):
 		_build_marker(entity, "fragment_id", "FragmentMarker")
 	for entity in LDtkProject.get_entities(level, "Door"):
@@ -105,7 +113,7 @@ func _build_solid_rect(entity: Dictionary) -> void:
 	])
 	body.add_child(visual)
 
-func _build_marker(entity: Dictionary, field_id: String, group_name: String) -> void:
+func _build_marker(entity: Dictionary, field_id: String, group_name: String) -> Marker2D:
 	var marker := Marker2D.new()
 	marker.position = LDtkProject.entity_position(entity)
 	var tag: String = LDtkProject.get_field(entity, field_id, "unnamed")
@@ -113,6 +121,14 @@ func _build_marker(entity: Dictionary, field_id: String, group_name: String) -> 
 	marker.add_to_group(group_name)
 	marker.set_meta(field_id, tag)
 	add_child(marker)
+	return marker
+
+
+func _maybe_spawn_encounter(marker: Marker2D, encounter_id: String) -> void:
+	if not ENCOUNTER_SCENES.has(encounter_id):
+		return
+	var instance: Node2D = ENCOUNTER_SCENES[encounter_id].instantiate()
+	marker.add_child(instance)
 
 func _build_door(entity: Dictionary) -> void:
 	var pos := LDtkProject.entity_position(entity)

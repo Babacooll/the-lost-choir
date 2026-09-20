@@ -19,8 +19,10 @@ so far and `## Running the project` for how to open it.
   `docs/design/vertical-slice.md`. Checkpoint 1 (project bootstrap, player movement,
   debug overlay, CI skeleton), checkpoint 2 (Strike, Answer, input buffering,
   scripted dummy tell emitter), checkpoint 3 (Reed Husk, Keening Husk, the shared
-  tell contract's stagger/arbitration/compression rules), and the seven-room zone
-  graph (§6, LDtk-into-Godot pipeline) are in this repository.
+  tell contract's stagger/arbitration/compression rules), checkpoint 4 (the R6
+  restoration encounter — §7's offer/response phrase, adaptive shortening/
+  extension, narrative delivery, and the restoration flag flip), and the
+  seven-room zone graph (§6, LDtk-into-Godot pipeline) are in this repository.
 
 ## Running the project (Godot editor)
 

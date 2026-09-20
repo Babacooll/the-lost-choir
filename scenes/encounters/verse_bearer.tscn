@@ -1,0 +1,21 @@
+[gd_scene load_steps=2 format=3 uid="uid://dqf1n8k0y3x9m"]
+
+[ext_resource type="Script" path="res://scripts/encounters/restoration_encounter.gd" id="1_verse_bearer"]
+
+[node name="VerseBearer" type="Node2D"]
+script = ExtResource("1_verse_bearer")
+
+[node name="Visual" type="Polygon2D" parent="."]
+color = Color(0.4, 0.4, 0.45, 1)
+polygon = PackedVector2Array(-10, -36, 10, -36, 10, 0, -10, 0)
+
+[node name="NarrativeLayer" type="CanvasLayer" parent="."]
+layer = 5
+
+[node name="Label" type="Label" parent="NarrativeLayer"]
+offset_left = 40.0
+offset_top = 400.0
+offset_right = 600.0
+offset_bottom = 440.0
+horizontal_alignment = 1
+autowrap_mode = 2
