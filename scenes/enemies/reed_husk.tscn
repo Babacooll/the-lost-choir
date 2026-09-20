@@ -1,0 +1,18 @@
+[gd_scene load_steps=3 format=3 uid="uid://c8h1n5v0y6x2k"]
+
+[ext_resource type="Script" path="res://scripts/enemies/reed_husk.gd" id="1_reed"]
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_reed"]
+size = Vector2(16, 32)
+
+[node name="ReedHusk" type="CharacterBody2D"]
+script = ExtResource("1_reed")
+floor_stop_on_slope = true
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+position = Vector2(0, -16)
+shape = SubResource("RectangleShape2D_reed")
+
+[node name="Visual" type="Polygon2D" parent="."]
+color = Color(0.55, 0.32, 0.24, 1)
+polygon = PackedVector2Array(-8, -32, 8, -32, 8, 0, -8, 0)

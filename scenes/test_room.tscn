@@ -1,8 +1,10 @@
-[gd_scene load_steps=8 format=3 uid="uid://d1p5r8x4k2n7w"]
+[gd_scene load_steps=10 format=3 uid="uid://d1p5r8x4k2n7w"]
 
 [ext_resource type="PackedScene" uid="uid://b3k4l7dv1m8xq" path="res://scenes/player.tscn" id="1_player"]
 [ext_resource type="Script" path="res://scripts/combat/tell_emitter.gd" id="2_tell_emitter"]
 [ext_resource type="Script" path="res://scripts/debug/dummy_tell_director.gd" id="3_tell_director"]
+[ext_resource type="PackedScene" uid="uid://c8h1n5v0y6x2k" path="res://scenes/enemies/reed_husk.tscn" id="4_reed_husk"]
+[ext_resource type="PackedScene" uid="uid://dq2m8w5r1p4nz" path="res://scenes/enemies/keening_husk.tscn" id="5_keening_husk"]
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_platform_a"]
 size = Vector2(400, 40)
@@ -70,3 +72,10 @@ script = ExtResource("2_tell_emitter")
 [node name="DummyTellDirector" type="Node" parent="."]
 script = ExtResource("3_tell_director")
 tell_emitter_path = NodePath("../DummyTellEmitter")
+player_path = NodePath("../Player")
+
+[node name="ReedHusk" parent="." instance=ExtResource("4_reed_husk")]
+position = Vector2(250, 400)
+
+[node name="KeeningHusk" parent="." instance=ExtResource("5_keening_husk")]
+position = Vector2(620, 420)

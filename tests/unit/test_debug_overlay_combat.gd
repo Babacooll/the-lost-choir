@@ -54,6 +54,9 @@ func test_overlay_plots_a_successful_answer_against_its_tell_window() -> void:
 	assert_eq(timeline.press_ms, combat.last_answer_press_ms)
 	assert_eq(timeline.result, "success")
 	assert_eq(timeline.buffer_ms, combat.ANSWER_PRE_WINDOW_BUFFER_MS)
+	assert_eq(timeline.transient_ms, combat.last_tell_transient_ms)
+	assert_almost_eq(timeline.transient_ms, combat.last_tell_onset_ms + 160.0, 0.01,
+		"§5 shared rule 2: the identifying transient lands 160 ms into the tell")
 
 
 func test_readout_includes_hp_strike_and_answer_state() -> void:

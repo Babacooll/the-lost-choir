@@ -74,6 +74,7 @@ var _tells: Array = []
 # --- Debug-overlay-facing readouts (§11.2/§11.3 instrumentation) -----------
 var last_tell_onset_ms: float = -INF
 var last_tell_close_ms: float = -INF
+var last_tell_transient_ms: float = -INF
 var last_answer_press_ms: float = -INF
 var last_answer_result: String = ""  # "success" | "whiff" | ""
 
@@ -85,7 +86,24 @@ func _ready() -> void:
 func register_tell_emitter(emitter: TellEmitter) -> void:
 	_tells.append(emitter)
 	emitter.tell_opened.connect(_on_tell_opened.bind(emitter))
-	emitter.tell_missed.connect(_on_tell_missed.bind(emitter))
+	# Note: PlayerCombat does NOT listen for tell_missed to deal damage.
+	# "The attack lands" is enemy-specific (a lunge's reach check, a
+	# projectile's travel-and-hit) — whoever opens the tell owns resolving
+	# it. PlayerCombat's job is only answer-matching/arbitration and
+	# bookkeeping for the overlay.
+
+
+## §5 shared rule 5: no enemy may begin a tell while another enemy's tell is
+## open *and* within 200 ms of its onset — tells must stagger so two open
+## windows are always distinguishable. Enemies call this before opening.
+func can_open_tell(now_ms: float = -1.0) -> bool:
+	if now_ms < 0.0:
+		now_ms = Time.get_ticks_msec()
+	for emitter in _tells:
+		if is_instance_valid(emitter) and emitter.is_open():
+			if absf(now_ms - emitter.onset_ms()) < 200.0:
+				return false
+	return true
 
 
 ## Strike is locked out during startup and active — "not cancellable during
@@ -240,16 +258,30 @@ func _finish_answer_pose() -> void:
 
 
 func _find_matching_open_tell(press_ms: float) -> TellEmitter:
-	# §3.3 "overlapping tell windows": resolves the tell whose attack lands
-	# soonest (earliest close_ms) among all matches.
+	# §5 shared rule 6: with two open windows, an Answer resolves the one
+	# whose attack lands soonest (earliest close_ms) — never the one that
+	# opened first, never the nearest enemy. Ties break on nearest enemy by
+	# centre distance, then on lowest instance id, so the result is
+	# deterministic and reproducible.
 	var best: TellEmitter = null
 	for emitter in _tells:
 		if not is_instance_valid(emitter) or not emitter.is_open():
 			continue
-		if _press_matches_window(press_ms, emitter.onset_ms(), emitter.close_ms()):
-			if best == null or emitter.close_ms() < best.close_ms():
-				best = emitter
+		if not _press_matches_window(press_ms, emitter.onset_ms(), emitter.close_ms()):
+			continue
+		if best == null or _is_better_tell_match(emitter, best):
+			best = emitter
 	return best
+
+
+func _is_better_tell_match(candidate: TellEmitter, current_best: TellEmitter) -> bool:
+	if candidate.close_ms() != current_best.close_ms():
+		return candidate.close_ms() < current_best.close_ms()
+	var d_candidate := player.global_position.distance_to(candidate.global_position)
+	var d_best := player.global_position.distance_to(current_best.global_position)
+	if d_candidate != d_best:
+		return d_candidate < d_best
+	return candidate.get_instance_id() < current_best.get_instance_id()
 
 
 func _press_matches_window(press_ms: float, onset_ms: float, close_ms: float) -> bool:
@@ -262,24 +294,15 @@ func _press_matches_window(press_ms: float, onset_ms: float, close_ms: float) ->
 func _on_tell_opened(onset_ms: float, close_ms: float, emitter: TellEmitter) -> void:
 	last_tell_onset_ms = onset_ms
 	last_tell_close_ms = close_ms
+	last_tell_transient_ms = emitter.transient_ms()
 	if not _answer_press_pending:
 		return
-	if _press_matches_window(_answer_pending_press_ms, onset_ms, close_ms):
-		_resolve_answer_success(emitter)
-
-
-func _on_tell_missed(emitter: TellEmitter) -> void:
-	# The attack resolves whether or not the player was mid-Answer at all —
-	# "on failure (whiff or no press)" ties the damage to the tell closing
-	# unresolved, not to the Answer move's own state machine.
-	if player != null and player.has_method("take_hit"):
-		var knockback_dir := Vector2.RIGHT
-		if player.facing != 0.0:
-			knockback_dir = Vector2(-player.facing, 0.0)
-		player.take_hit(
-			ANSWER_FAIL_DAMAGE, knockback_dir, ANSWER_FAIL_KNOCKBACK_PX,
-			ANSWER_FAIL_HITSTUN_MS, ANSWER_FAIL_INVULN_MS
-		)
+	# Re-run full arbitration rather than assuming the newly-opened window is
+	# the match: it might not even be the soonest-landing one if another
+	# tell was already open (§5 shared rule 6).
+	var best := _find_matching_open_tell(_answer_pending_press_ms)
+	if best != null:
+		_resolve_answer_success(best)
 
 
 func _resolve_answer_success(emitter: TellEmitter) -> void:

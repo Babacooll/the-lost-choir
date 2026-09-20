@@ -106,16 +106,20 @@ func test_answer_recovery_whiff_lasts_220ms() -> void:
 	assert_eq(combat.answer_state, combat.AnswerState.IDLE)
 
 
-func test_unanswered_tell_damages_the_player_on_close() -> void:
+func test_unanswered_tell_fires_tell_missed_without_combat_dealing_damage_itself() -> void:
+	# "The attack lands" is owned by whoever opened the tell (a real enemy's
+	# lunge/projectile, or checkpoint 2's dummy director), not PlayerCombat —
+	# combat.gd only arbitrates Answer/tell matching. This checkpoint-2
+	# fixture has no owner connected, so a miss must NOT touch player.hp;
+	# the contract PlayerCombat still guarantees is that tell_missed fires.
+	watch_signals(_emitter)
 	var start_hp: int = _player.hp
 	_emitter.open_tell(40.0)  # short lead time; never press Answer
 
 	await wait_seconds(0.12)
 
-	assert_eq(_player.hp, start_hp - 1)
-	assert_true(_player.hitstun_timer_ms > 0.0)
-	assert_true(_player.invuln_timer_ms > 0.0)
-	assert_ne(_player.knockback_velocity_x, 0.0)
+	assert_signal_emitted(_emitter, "tell_missed")
+	assert_eq(_player.hp, start_hp, "PlayerCombat must not deal damage itself on a miss")
 
 
 func test_invulnerability_blocks_a_second_hit_immediately_after() -> void:
