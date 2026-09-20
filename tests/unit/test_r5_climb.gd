@@ -20,15 +20,15 @@ const MAX_APEX := 59.0  # matches Reviewer's measured apex (design contract is 5
 # identifies which of R5's several same-shaped rects is "rung2" etc. without
 # depending on LDtk entity naming (SolidRects are anonymous).
 const CLIMB_ORDER := [
-	Vector2(0, 528),    # floor
-	Vector2(176, 470),  # rung1
-	Vector2(40, 432),   # ledge1
-	Vector2(80, 374),   # rung2
-	Vector2(176, 336),  # ledge2
-	Vector2(150, 278),  # rung3
-	Vector2(40, 240),   # ledge3
-	Vector2(20, 182),   # rung4
-	Vector2(176, 144),  # ledge4
+	Vector2(0, 528),     # floor
+	Vector2(273, 478),   # rung1
+	Vector2(160, 428),   # ledge1
+	Vector2(69, 378),    # rung2
+	Vector2(19, 328),    # ledge2
+	Vector2(124, 278),   # rung3
+	Vector2(184, 228),   # ledge3
+	Vector2(263, 178),   # rung4
+	Vector2(139, 128),   # ledge4
 ]
 
 
