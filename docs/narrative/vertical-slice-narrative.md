@@ -122,10 +122,15 @@ is a defeat. "Answer it anyway" is the playable form of *choosing to sing it aga
    silence after a broken phrase, which is the gap between the last note sung and the first note of
    the re-offer. This keeps the text flowing for a player the adaptive shortening has dropped to a
    1-note phrase (design spec §7.4), who would otherwise have no gaps left to receive it in.
-4. **Display timing**: a line fades in at gap onset and holds through the following note, clearing
-   when the next line begins or 1800 ms after onset, whichever is later. Notes are 1100 ms apart, and
-   ten words are not readable in 1100 ms. *This is the one place the text extends past the literal
-   gap; flagged to Game Designer in §7 rather than assumed.*
+4. **Display timing — settled, build to this.** A line fades in over 200 ms at gap onset, holds
+   through the following note, and clears over 300 ms when the next line begins or 1800 ms after it
+   became fully legible, whichever is later. Notes are 1100 ms apart and ten words are not readable
+   in 1100 ms, so the text begins in the gap and finishes over the note. That overlap is the point,
+   not a compromise: the player is reading the reason *while* hearing the phrase, which is the beat
+   §7 of the design spec asks for. A line is never interrupted by the next one, and nothing about
+   this display can block, gate, pause or extend a note — the phrase's timing in §7 of the design
+   spec is untouched, and the text is a passive layer over it.
+   *Decided by the Creative Director on 2026-09-20; no longer open.*
 5. **Once the lines are spent, the encounter is wordless.** On a clean run this is deliberate and
    load-bearing: attempt 1 (3 notes) carries lines 1–2, attempt 2 (4 notes) carries lines 3–4, and
    the final 5-note phrase — the one that actually restores the Verse — has **no text at all**. The
@@ -236,11 +241,10 @@ does not appear below does not need a narrative justification invented for it, a
   pitch. Line 4 asks for agreement from a voice, not from a person with a history here. If a later
   pass finds itself wanting the bearer to *recognise* the Listener, stop — that is the gate, and it
   is not mine to open.
-- **Flagged to Game Designer** (§3.2 rule 4): the display of a gap line extends past the literal gap
-  into the following note, because ten words are not readable in 1100 ms. The text still *begins* in
-  the gap and the encounter still ends wordless. If Design wants the text strictly bounded by the
-  silence, the lines drop to ~5 words each and lose lines 1 and 3's specificity — say so and I will
-  rewrite rather than re-time.
+- **Closed** (§3.2 rule 4): gap-line display overlapping the following note was raised as a Design
+  question and settled by the Creative Director on 2026-09-20 in favour of keeping the lines. The
+  four lines stay at full length; the display rule in §3.2 is the build target. Nothing here is
+  waiting on an answer.
 - **Deferred, unchanged**: the "why this Verse went quiet" taxonomy; any second Verse's reason; the
   bearer's name; the other Verses' identities; anything about the collective choice.
 - **For the post-play question list**: does R8 land as meaning, or as an anticlimax (H7)? And do
