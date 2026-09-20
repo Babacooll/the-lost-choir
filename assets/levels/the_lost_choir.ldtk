@@ -1,0 +1,383 @@
+{
+  "jsonVersion": "1.5.3",
+  "defaultGridSize": 16,
+  "worldLayout": "Free",
+  "notes": [
+    "The Lost Choir — vertical slice zone, docs/design/vertical-slice.md §6.",
+    "Authored by hand against the LDtk export schema (entityInstances / fieldInstances / px)",
+    "so the runtime importer (scripts/levels/ldtk_project.gd) can be swapped to a real LDtk",
+    "export later without changing the reader. Placeholder blockout geometry only — Art",
+    "integration replaces SolidRect entities with real tileset IntGrid content in a later pass."
+  ],
+  "defs": {
+    "layers": [
+      {
+        "identifier": "Entities",
+        "type": "Entities",
+        "gridSize": 16
+      }
+    ],
+    "entities": [
+      {
+        "identifier": "PlayerStart",
+        "width": 16,
+        "height": 16,
+        "fieldDefs": []
+      },
+      {
+        "identifier": "SolidRect",
+        "width": 16,
+        "height": 16,
+        "resizableX": true,
+        "resizableY": true,
+        "fieldDefs": []
+      },
+      {
+        "identifier": "Door",
+        "width": 16,
+        "height": 32,
+        "resizableX": true,
+        "resizableY": true,
+        "fieldDefs": [
+          { "identifier": "door_id", "type": "String" },
+          { "identifier": "target_level", "type": "String" },
+          { "identifier": "target_door_id", "type": "String" },
+          { "identifier": "requires_flag", "type": "String" }
+        ]
+      },
+      {
+        "identifier": "EnemyMarker",
+        "width": 16,
+        "height": 16,
+        "fieldDefs": [
+          { "identifier": "enemy_type", "type": "String" }
+        ]
+      },
+      {
+        "identifier": "EncounterMarker",
+        "width": 16,
+        "height": 16,
+        "fieldDefs": [
+          { "identifier": "encounter_id", "type": "String" }
+        ]
+      },
+      {
+        "identifier": "FragmentMarker",
+        "width": 16,
+        "height": 16,
+        "fieldDefs": [
+          { "identifier": "fragment_id", "type": "String" }
+        ]
+      }
+    ]
+  },
+  "levels": [
+    {
+      "identifier": "R1_ColdStep",
+      "pxWid": 560,
+      "pxHei": 240,
+      "worldX": 0,
+      "worldY": 0,
+      "layerInstances": [
+        {
+          "__identifier": "Entities",
+          "__type": "Entities",
+          "entityInstances": [
+            { "__identifier": "PlayerStart", "px": [32, 184], "width": 16, "height": 16, "fieldInstances": [] },
+            { "__identifier": "SolidRect", "px": [0, 208], "width": 240, "height": 32, "fieldInstances": [] },
+            { "__identifier": "SolidRect", "px": [248, 168], "width": 64, "height": 16, "fieldInstances": [] },
+            { "__identifier": "SolidRect", "px": [328, 208], "width": 232, "height": 32, "fieldInstances": [] },
+            {
+              "__identifier": "Door", "px": [544, 152], "width": 16, "height": 56,
+              "fieldInstances": [
+                { "__identifier": "door_id", "__value": "R1_to_R2" },
+                { "__identifier": "target_level", "__value": "R2_ReedGallery" },
+                { "__identifier": "target_door_id", "__value": "R2_to_R1" },
+                { "__identifier": "requires_flag", "__value": "" }
+              ]
+            },
+            {
+              "__identifier": "Door", "px": [0, 152], "width": 16, "height": 56,
+              "fieldInstances": [
+                { "__identifier": "door_id", "__value": "R1_to_R7" },
+                { "__identifier": "target_level", "__value": "R7_WarmReturn" },
+                { "__identifier": "target_door_id", "__value": "R7_to_R1" },
+                { "__identifier": "requires_flag", "__value": "restoration_complete" }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "identifier": "R2_ReedGallery",
+      "pxWid": 800,
+      "pxHei": 240,
+      "worldX": 700,
+      "worldY": 0,
+      "layerInstances": [
+        {
+          "__identifier": "Entities",
+          "__type": "Entities",
+          "entityInstances": [
+            { "__identifier": "SolidRect", "px": [0, 208], "width": 800, "height": 32, "fieldInstances": [] },
+            {
+              "__identifier": "Door", "px": [0, 152], "width": 16, "height": 56,
+              "fieldInstances": [
+                { "__identifier": "door_id", "__value": "R2_to_R1" },
+                { "__identifier": "target_level", "__value": "R1_ColdStep" },
+                { "__identifier": "target_door_id", "__value": "R1_to_R2" },
+                { "__identifier": "requires_flag", "__value": "" }
+              ]
+            },
+            {
+              "__identifier": "EnemyMarker", "px": [160, 192], "width": 16, "height": 16,
+              "fieldInstances": [{ "__identifier": "enemy_type", "__value": "PassiveHusk" }]
+            },
+            {
+              "__identifier": "EnemyMarker", "px": [600, 192], "width": 16, "height": 16,
+              "fieldInstances": [{ "__identifier": "enemy_type", "__value": "ReedHusk" }]
+            },
+            {
+              "__identifier": "Door", "px": [784, 152], "width": 16, "height": 56,
+              "fieldInstances": [
+                { "__identifier": "door_id", "__value": "R2_to_R4" },
+                { "__identifier": "target_level", "__value": "R4_MembraneHall" },
+                { "__identifier": "target_door_id", "__value": "R4_to_R2" },
+                { "__identifier": "requires_flag", "__value": "" }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "identifier": "R4_MembraneHall",
+      "pxWid": 480,
+      "pxHei": 320,
+      "worldX": 1600,
+      "worldY": 0,
+      "layerInstances": [
+        {
+          "__identifier": "Entities",
+          "__type": "Entities",
+          "entityInstances": [
+            { "__identifier": "SolidRect", "px": [0, 288], "width": 480, "height": 32, "fieldInstances": [] },
+            { "__identifier": "SolidRect", "px": [336, 96], "width": 96, "height": 16, "fieldInstances": [] },
+            {
+              "__identifier": "Door", "px": [0, 232], "width": 16, "height": 56,
+              "fieldInstances": [
+                { "__identifier": "door_id", "__value": "R4_to_R2" },
+                { "__identifier": "target_level", "__value": "R2_ReedGallery" },
+                { "__identifier": "target_door_id", "__value": "R2_to_R4" },
+                { "__identifier": "requires_flag", "__value": "" }
+              ]
+            },
+            {
+              "__identifier": "Door", "px": [464, 232], "width": 16, "height": 56,
+              "fieldInstances": [
+                { "__identifier": "door_id", "__value": "R4_to_R5" },
+                { "__identifier": "target_level", "__value": "R5_Colonnade" },
+                { "__identifier": "target_door_id", "__value": "R5_to_R4" },
+                { "__identifier": "requires_flag", "__value": "" }
+              ]
+            },
+            {
+              "__identifier": "Door", "px": [416, 64], "width": 16, "height": 32,
+              "fieldInstances": [
+                { "__identifier": "door_id", "__value": "R4_to_R5_high" },
+                { "__identifier": "target_level", "__value": "R5_Colonnade" },
+                { "__identifier": "target_door_id", "__value": "R5_high_from_R4" },
+                { "__identifier": "requires_flag", "__value": "restoration_complete" }
+              ]
+            },
+            {
+              "__identifier": "Door", "px": [336, 64], "width": 16, "height": 32,
+              "fieldInstances": [
+                { "__identifier": "door_id", "__value": "R4_to_R8" },
+                { "__identifier": "target_level", "__value": "R8_CrackedBell" },
+                { "__identifier": "target_door_id", "__value": "R8_from_R4" },
+                { "__identifier": "requires_flag", "__value": "restoration_complete" }
+              ]
+            },
+            {
+              "__identifier": "Door", "px": [200, 232], "width": 16, "height": 56,
+              "fieldInstances": [
+                { "__identifier": "door_id", "__value": "R4_to_R7" },
+                { "__identifier": "target_level", "__value": "R7_WarmReturn" },
+                { "__identifier": "target_door_id", "__value": "R7_to_R4" },
+                { "__identifier": "requires_flag", "__value": "restoration_complete" }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "identifier": "R5_Colonnade",
+      "pxWid": 320,
+      "pxHei": 560,
+      "worldX": 2200,
+      "worldY": 0,
+      "layerInstances": [
+        {
+          "__identifier": "Entities",
+          "__type": "Entities",
+          "entityInstances": [
+            {
+              "__identifier": "Door", "px": [0, 504], "width": 16, "height": 56,
+              "fieldInstances": [
+                { "__identifier": "door_id", "__value": "R5_to_R4" },
+                { "__identifier": "target_level", "__value": "R4_MembraneHall" },
+                { "__identifier": "target_door_id", "__value": "R4_to_R5" },
+                { "__identifier": "requires_flag", "__value": "" }
+              ]
+            },
+            { "__identifier": "SolidRect", "px": [0, 528], "width": 320, "height": 32, "fieldInstances": [] },
+            { "__identifier": "SolidRect", "px": [40, 432], "width": 96, "height": 16, "fieldInstances": [] },
+            {
+              "__identifier": "EnemyMarker", "px": [70, 416], "width": 16, "height": 16,
+              "fieldInstances": [{ "__identifier": "enemy_type", "__value": "ReedHusk" }]
+            },
+            { "__identifier": "SolidRect", "px": [176, 336], "width": 96, "height": 16, "fieldInstances": [] },
+            {
+              "__identifier": "EnemyMarker", "px": [210, 320], "width": 16, "height": 16,
+              "fieldInstances": [{ "__identifier": "enemy_type", "__value": "KeeningHusk" }]
+            },
+            { "__identifier": "SolidRect", "px": [40, 240], "width": 96, "height": 16, "fieldInstances": [] },
+            { "__identifier": "SolidRect", "px": [176, 144], "width": 96, "height": 16, "fieldInstances": [] },
+            {
+              "__identifier": "Door", "px": [0, 120], "width": 16, "height": 32,
+              "fieldInstances": [
+                { "__identifier": "door_id", "__value": "R5_high_from_R4" },
+                { "__identifier": "target_level", "__value": "R4_MembraneHall" },
+                { "__identifier": "target_door_id", "__value": "R4_to_R5_high" },
+                { "__identifier": "requires_flag", "__value": "restoration_complete" }
+              ]
+            },
+            {
+              "__identifier": "Door", "px": [224, 32], "width": 16, "height": 56,
+              "fieldInstances": [
+                { "__identifier": "door_id", "__value": "R5_to_R6" },
+                { "__identifier": "target_level", "__value": "R6_ColdAmphitheater" },
+                { "__identifier": "target_door_id", "__value": "R6_to_R5" },
+                { "__identifier": "requires_flag", "__value": "" }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "identifier": "R6_ColdAmphitheater",
+      "pxWid": 400,
+      "pxHei": 240,
+      "worldX": 2700,
+      "worldY": 0,
+      "layerInstances": [
+        {
+          "__identifier": "Entities",
+          "__type": "Entities",
+          "entityInstances": [
+            {
+              "__identifier": "Door", "px": [0, 152], "width": 16, "height": 56,
+              "fieldInstances": [
+                { "__identifier": "door_id", "__value": "R6_to_R5" },
+                { "__identifier": "target_level", "__value": "R5_Colonnade" },
+                { "__identifier": "target_door_id", "__value": "R5_to_R6" },
+                { "__identifier": "requires_flag", "__value": "" }
+              ]
+            },
+            { "__identifier": "SolidRect", "px": [0, 208], "width": 400, "height": 32, "fieldInstances": [] },
+            {
+              "__identifier": "EncounterMarker", "px": [200, 176], "width": 16, "height": 16,
+              "fieldInstances": [{ "__identifier": "encounter_id", "__value": "verse_bearer_r6" }]
+            },
+            {
+              "__identifier": "Door", "px": [384, 152], "width": 16, "height": 56,
+              "fieldInstances": [
+                { "__identifier": "door_id", "__value": "R6_to_R7" },
+                { "__identifier": "target_level", "__value": "R7_WarmReturn" },
+                { "__identifier": "target_door_id", "__value": "R7_to_R6" },
+                { "__identifier": "requires_flag", "__value": "restoration_complete" }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "identifier": "R7_WarmReturn",
+      "pxWid": 480,
+      "pxHei": 240,
+      "worldX": 3200,
+      "worldY": 0,
+      "layerInstances": [
+        {
+          "__identifier": "Entities",
+          "__type": "Entities",
+          "entityInstances": [
+            {
+              "__identifier": "Door", "px": [0, 152], "width": 16, "height": 56,
+              "fieldInstances": [
+                { "__identifier": "door_id", "__value": "R7_to_R6" },
+                { "__identifier": "target_level", "__value": "R6_ColdAmphitheater" },
+                { "__identifier": "target_door_id", "__value": "R6_to_R7" },
+                { "__identifier": "requires_flag", "__value": "restoration_complete" }
+              ]
+            },
+            { "__identifier": "SolidRect", "px": [0, 208], "width": 480, "height": 32, "fieldInstances": [] },
+            { "__identifier": "SolidRect", "px": [220, 160], "width": 32, "height": 48, "fieldInstances": [] },
+            {
+              "__identifier": "Door", "px": [464, 152], "width": 16, "height": 56,
+              "fieldInstances": [
+                { "__identifier": "door_id", "__value": "R7_to_R4" },
+                { "__identifier": "target_level", "__value": "R4_MembraneHall" },
+                { "__identifier": "target_door_id", "__value": "R4_to_R7" },
+                { "__identifier": "requires_flag", "__value": "restoration_complete" }
+              ]
+            },
+            {
+              "__identifier": "Door", "px": [0, 72], "width": 16, "height": 56,
+              "fieldInstances": [
+                { "__identifier": "door_id", "__value": "R7_to_R1" },
+                { "__identifier": "target_level", "__value": "R1_ColdStep" },
+                { "__identifier": "target_door_id", "__value": "R1_to_R7" },
+                { "__identifier": "requires_flag", "__value": "restoration_complete" }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "identifier": "R8_CrackedBell",
+      "pxWid": 240,
+      "pxHei": 200,
+      "worldX": 1600,
+      "worldY": 500,
+      "layerInstances": [
+        {
+          "__identifier": "Entities",
+          "__type": "Entities",
+          "entityInstances": [
+            {
+              "__identifier": "Door", "px": [0, 120], "width": 16, "height": 32,
+              "fieldInstances": [
+                { "__identifier": "door_id", "__value": "R8_from_R4" },
+                { "__identifier": "target_level", "__value": "R4_MembraneHall" },
+                { "__identifier": "target_door_id", "__value": "R4_to_R8" },
+                { "__identifier": "requires_flag", "__value": "restoration_complete" }
+              ]
+            },
+            { "__identifier": "SolidRect", "px": [0, 168], "width": 240, "height": 32, "fieldInstances": [] },
+            {
+              "__identifier": "FragmentMarker", "px": [120, 144], "width": 16, "height": 16,
+              "fieldInstances": [{ "__identifier": "fragment_id", "__value": "r8_fragment" }]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

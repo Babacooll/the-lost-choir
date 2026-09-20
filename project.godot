@@ -11,12 +11,14 @@ config_version=5
 [application]
 
 config/name="The Lost Choir"
-run/main_scene="res://scenes/test_room.tscn"
+run/main_scene="res://scenes/levels/Zone.tscn"
 config/features=PackedStringArray("4.3", "GL Compatibility")
 config/icon="res://icon.svg"
 
 [autoload]
 
+GameState="*res://scripts/state/game_state.gd"
+ZoneManager="*res://scripts/levels/zone_manager.gd"
 DebugOverlay="*res://scenes/debug_overlay.tscn"
 
 [editor_plugins]
