@@ -75,11 +75,12 @@ func test_rises_again_on_ramp_out() -> void:
 	_tick_sustain(150.0)
 	await get_tree().physics_frame
 	assert_false(_bell.is_descended(), "a bell-frame should rise again once ramp-out completes")
-	assert_eq(_bell.position.y, 0.0)
+	assert_eq(_bell.position, Vector2(50, 0), "should return exactly to its authored high position, not overshoot it")
 
 
 func test_stays_at_high_position_outside_the_140px_range() -> void:
 	_bell.global_position = Vector2(300, 0)
+	await get_tree().physics_frame  # let the repositioned transform actually propagate first
 	_engage_sustain()
 	await get_tree().physics_frame
 	assert_false(_bell.is_descended(), "a bell-frame outside 140 px must not descend")

@@ -50,7 +50,10 @@ func _physics_process(_delta: float) -> void:
 	var should_descend := _should_descend()
 	if should_descend == _descended:
 		return
-	position = _high_position + low_offset if should_descend else _high_position
+	# Parenthesized deliberately — `a + b if c else a` parses in GDScript as
+	# `a + (b if c else a)`, not `(a + b) if c else a`, which silently
+	# doubled the high position on the rise-back-up branch.
+	position = (_high_position + low_offset) if should_descend else _high_position
 	_descended = should_descend
 
 

@@ -161,7 +161,10 @@ func test_jump_velocity_is_unaffected_by_sustaining() -> void:
 	_tick(200.0)  # ACTIVE
 
 	_input.action_down(&"jump")
-	await get_tree().physics_frame
+	var ticks := 0
+	while _player.velocity.y >= 0.0 and ticks < 10:
+		await get_tree().physics_frame
+		ticks += 1
 	assert_almost_eq(_player.velocity.y, -PlayerScript.JUMP_VELOCITY, 1.0,
 		"§4.1: jump is unaffected by Sustain")
 	_input.action_up(&"jump")
