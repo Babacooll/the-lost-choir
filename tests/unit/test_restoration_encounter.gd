@@ -93,18 +93,21 @@ func test_notes_spaced_1100ms_apart_when_answered_promptly() -> void:
 
 
 func test_missed_note_triggers_1400ms_silence_then_reoffers_from_start() -> void:
-	var miss_ms := -1.0
-	_encounter._emitter.tell_missed.connect(func(): miss_ms = Time.get_ticks_msec())
+	# A plain local captured by a lambda is captured BY VALUE in GDScript —
+	# assigning to it inside the callback would not be visible out here, so
+	# the mutable box is a one-element Array instead (captured by reference).
+	var miss_ms := [-1.0]
+	_encounter._emitter.tell_missed.connect(func(): miss_ms[0] = Time.get_ticks_msec())
 
-	await _wait_until(func(): return miss_ms > 0.0, 120)
-	assert_true(miss_ms > 0.0, "an unanswered note should miss once its 700 ms lead elapses")
+	await _wait_until(func(): return miss_ms[0] > 0.0, 120)
+	assert_true(miss_ms[0] > 0.0, "an unanswered note should miss once its 700 ms lead elapses")
 	assert_eq(_encounter.state, _encounter.State.SILENCE)
 
 	await _wait_until(
 		func(): return _encounter.state == _encounter.State.OFFERING and _encounter._emitter.is_open(), 180
 	)
 	var reoffer_onset: float = _encounter._emitter.onset_ms()
-	assert_almost_eq(reoffer_onset - miss_ms, 1400.0, 60.0,
+	assert_almost_eq(reoffer_onset - miss_ms[0], 1400.0, 60.0,
 		"the bearer should re-offer 1400 ms after a missed note, carrying no sound in between")
 	assert_eq(_encounter._note_index, 0, "a re-offer starts the phrase over from the first note")
 

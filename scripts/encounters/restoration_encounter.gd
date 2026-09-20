@@ -133,7 +133,7 @@ func _on_note_missed() -> void:
 		return
 	_consecutive_successes = 0
 	_consecutive_failures += 1
-	_phrase_length = _next_phrase_length()
+	_phrase_length = _shortened_phrase_length_after_failure()
 	state = State.SILENCE
 	_silence_elapsed_ms = 0.0
 	_maybe_release_narrative_line()  # the post-miss silence counts as a gap (§7.4)
@@ -144,8 +144,15 @@ func _complete_attempt() -> void:
 		_restore()
 		return
 	_consecutive_failures = 0
-	_consecutive_successes += 1
-	_phrase_length = _next_phrase_length()
+	if _phrase_length < BASE_PHRASE_LENGTH:
+		# Recovering from adaptive shortening returns to base rather than
+		# resuming the extension ladder from mid-recovery — "the game meets
+		# the player" (§7.4), not "raises the bar the moment they recover."
+		_consecutive_successes = 0
+		_phrase_length = BASE_PHRASE_LENGTH
+	else:
+		_consecutive_successes += 1
+		_phrase_length = mini(MAX_PHRASE_LENGTH, BASE_PHRASE_LENGTH + _consecutive_successes)
 	_note_index = 0
 	# The next note's onset is still scheduled by the running NOTE_SPACING_MS
 	# timer (started when this attempt's final note opened) — an attempt
@@ -158,12 +165,12 @@ func _restart_phrase() -> void:
 	_open_note()
 
 
-func _next_phrase_length() -> int:
+func _shortened_phrase_length_after_failure() -> int:
 	if _consecutive_failures >= SHORTEN_TO_1_AFTER_FAILURES:
 		return 1
 	if _consecutive_failures >= SHORTEN_TO_2_AFTER_FAILURES:
 		return 2
-	return mini(MAX_PHRASE_LENGTH, BASE_PHRASE_LENGTH + _consecutive_successes)
+	return BASE_PHRASE_LENGTH
 
 
 func _restore() -> void:
