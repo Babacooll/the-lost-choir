@@ -11,8 +11,18 @@ const SOLID_COLOR := Color(0.32, 0.29, 0.36, 1.0)
 const GATED_DOOR_COLOR := Color(0.55, 0.4, 0.2, 1.0)
 const OPEN_DOOR_COLOR := Color(0.6, 0.6, 0.7, 0.35)
 
+# How far, horizontally, an arriving player is pushed clear of the door
+# trigger they just arrived through — big enough to clear the trigger's own
+# 16 px width plus the player's 18 px collider, so gravity settling them
+# back onto the floor cannot re-overlap the same Area2D and ping-pong.
+const SPAWN_HORIZONTAL_CLEARANCE := 32.0
+const SPAWN_MARGIN := 16.0
+
 var doors: Dictionary = {}  # door_id: String -> Door
 var player_start: Vector2 = Vector2.ZERO
+var _has_player_start: bool = false
+var _px_wid: float = 0.0
+var _px_hei: float = 0.0
 
 func _ready() -> void:
 	if level_id.is_empty():
@@ -22,21 +32,46 @@ func _ready() -> void:
 
 func get_door_spawn_position(door_id: String) -> Vector2:
 	if door_id.is_empty() or not doors.has(door_id):
-		return player_start
-	# Spawn just inside the room from the door, not on top of its trigger.
-	return (doors[door_id] as Door).position + Vector2(0, -8)
+		if _has_player_start:
+			return player_start
+		# No PlayerStart entity in this level (only R1 has one) and no valid
+		# door to arrive through — fall back to a safe, bounds-clear point
+		# rather than the origin, which sits exactly on a room's edge/corner
+		# in every level here and can shove the player out of bounds.
+		return Vector2(_px_wid * 0.5, 0.0)
+
+	var door: Door = doors[door_id]
+	# Door position is the trigger's top-left corner (§ _build_door). Push the
+	# spawn point inward from its horizontal centre, clear of its own width,
+	# so the arriving player cannot fall straight back into the trigger they
+	# just came through. Direction is toward the room's interior, inferred
+	# from which half of the room the door sits in.
+	var center_x := door.position.x + door.size.x * 0.5
+	var inward := 1.0 if center_x < _px_wid * 0.5 else -1.0
+	var spawn_x := clampf(
+		center_x + inward * SPAWN_HORIZONTAL_CLEARANCE,
+		SPAWN_MARGIN, maxf(SPAWN_MARGIN, _px_wid - SPAWN_MARGIN)
+	)
+	# Spawn at the trigger's own top edge — always at or above the floor a
+	# door's bottom edge is authored to align with — and let gravity settle
+	# the player, rather than assume the bottom edge is solid ground (it
+	# isn't, for every door in this zone).
+	return Vector2(spawn_x, door.position.y)
 
 func _build_from_ldtk() -> void:
 	var level := LDtkProject.get_level(level_id)
 	if level.is_empty():
 		return
 
-	_apply_camera_bounds(level.get("pxWid", 0.0), level.get("pxHei", 0.0))
+	_px_wid = level.get("pxWid", 0.0)
+	_px_hei = level.get("pxHei", 0.0)
+	_apply_camera_bounds(_px_wid, _px_hei)
 
 	for entity in LDtkProject.get_entities(level, "SolidRect"):
 		_build_solid_rect(entity)
 	for entity in LDtkProject.get_entities(level, "PlayerStart"):
 		player_start = LDtkProject.entity_position(entity)
+		_has_player_start = true
 	for entity in LDtkProject.get_entities(level, "EnemyMarker"):
 		_build_marker(entity, "enemy_type", "EnemyMarker")
 	for entity in LDtkProject.get_entities(level, "EncounterMarker"):
@@ -87,6 +122,7 @@ func _build_door(entity: Dictionary) -> void:
 	var door := Area2D.new()
 	door.set_script(DoorScript)
 	door.position = pos
+	door.size = Vector2(width, height)
 	door.door_id = LDtkProject.get_field(entity, "door_id", "")
 	door.target_level = LDtkProject.get_field(entity, "target_level", "")
 	door.target_door_id = LDtkProject.get_field(entity, "target_door_id", "")
@@ -116,7 +152,11 @@ func _on_door_body_entered(body: Node, door: Door) -> void:
 		return
 	if not door.is_open():
 		return
-	ZoneManager.travel(door.target_level, door.target_door_id)
+	# body_entered fires mid physics-query-flush; travel() frees this room's
+	# collision shapes and builds the next room's, which the physics server
+	# rejects until the flush finishes. Defer the actual rebuild to the next
+	# idle frame, outside the callback.
+	ZoneManager.call_deferred("travel", door.target_level, door.target_door_id)
 
 func _apply_camera_bounds(px_wid: float, px_hei: float) -> void:
 	# Per-room camera bounds, no scrolling across doors (§6 header). The

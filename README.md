@@ -26,8 +26,11 @@ Requires [Godot 4.3](https://godotengine.org/download) (GDScript, no C# build ne
 1. Open Godot 4.3.
 2. **Import** → select this repository's `project.godot`.
 3. Press **F5** (or the Play button) to run. The main scene is
-   `scenes/test_room.tscn` — a flat platform, one gap, and one raised ledge to
-   exercise player movement (§3.1 of the design spec).
+   `scenes/levels/Zone.tscn` — the seven-room zone graph (§6 of the design
+   spec), authored in `assets/levels/the_lost_choir.ldtk` and built at
+   runtime by `scripts/levels/room.gd`. It boots into R1, The Cold Step.
+   `scenes/test_room.tscn` is still present for isolated player-movement
+   exercises (§3.1) but is no longer the main scene.
 
 Controls: `A`/`D` or `←`/`→` to move, `Space` to jump, `F3` to toggle the debug
 overlay (off by default).

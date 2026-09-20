@@ -9,6 +9,7 @@ var door_id: String = ""
 var target_level: String = ""
 var target_door_id: String = ""
 var requires_flag: String = ""
+var size: Vector2 = Vector2.ZERO  # trigger footprint; position is its top-left corner
 
 func _ready() -> void:
 	if not requires_flag.is_empty():

@@ -84,3 +84,29 @@ func test_ungated_door_is_always_open() -> void:
 
 	var door: Door = room.doors["R1_to_R2"]
 	assert_true(door.is_open(), "R1<->R2 is a normal, always-open connection")
+
+
+func test_every_doors_spawn_position_stays_in_bounds_and_clear_of_its_own_trigger() -> void:
+	# Regression for the ping-pong/out-of-bounds spawn defect: every door in
+	# every room, not just the two most-used ones, must place the arriving
+	# player inside the room and outside the trigger they just arrived
+	# through — otherwise gravity walks them straight back into it.
+	for level_id in EXPECTED_LEVELS:
+		var room: Room = load("res://scenes/levels/%s.tscn" % level_id).instantiate()
+		add_child_autofree(room)
+		var level := LDtkProject.get_level(level_id)
+		var px_wid: float = level.get("pxWid")
+		var px_hei: float = level.get("pxHei")
+
+		for door_id in room.doors.keys():
+			var door: Door = room.doors[door_id]
+			var spawn := room.get_door_spawn_position(door_id)
+
+			assert_between(spawn.x, 0.0, px_wid, "%s/%s spawn.x must stay inside the room" % [level_id, door_id])
+			assert_between(spawn.y, 0.0, px_hei, "%s/%s spawn.y must stay inside the room" % [level_id, door_id])
+
+			var trigger := Rect2(door.position, door.size)
+			assert_false(
+				trigger.has_point(spawn),
+				"%s/%s spawn point must not land back inside its own trigger" % [level_id, door_id]
+			)
