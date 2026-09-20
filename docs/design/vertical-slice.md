@@ -402,8 +402,9 @@ This text is the one sanctioned exception to the diegetic UI budget in §9.
 - The crack becomes the light source: a warm gold seam with calligraphic wave etchings spreading from
   it (Art contract).
 - The ambient mix gains one interval of the leitmotif — permanently, zone-wide (Audio contract).
-- R6's palette temperature lerps cold→warm over **2500 ms**, starting at the seam and propagating
-  outward at roughly 300 px/s.
+- R6's palette temperature lerps cold→warm starting at the seam and propagating outward at
+  **300 px/s**, linear in distance — **~1.3 s** to R6's far corner at its authored size. The duration
+  is derived from the speed rather than fixed; see §8.
 - On subsequent entry, R5, R4, R2 and R1 are warm. R7 and R8 are authored warm-on-first-sight.
 - Sustain and Return become available immediately, in R6, before the player leaves. The player must
   be able to try the new verb in the room where they earned it.
@@ -422,11 +423,28 @@ adjective.
 | State | Requirement |
 |---|---|
 | Cold (pre-restoration) | Matte surfaces, no warm accent above the ambient floor, light sources cold and low-contrast. Gold/brass accents present but **unlit** — visibly dormant metal, not absent. |
-| Transition | 2500 ms lerp, seam-origin, ~300 px/s propagation. Must be visible in a single unbroken shot without a cut or fade. |
+| Transition | Seam-origin, **300 px/s** propagation, linear in distance. Duration is *derived* from that speed, not fixed independently of it — see below. Must be visible in a single unbroken shot without a cut or fade. |
 | Warm (post-restoration) | Brass/gold accents lit as the "sound is alive" accent; measurable rise in scene warmth and contrast. |
 
 Acceptance: a side-by-side screenshot of any restored room before and after must be unmistakably
 different **to someone who has not played the game**. If it needs explaining, it is not a lever.
+
+**Speed is the contract; duration falls out of it.** This row previously also fixed the lerp at
+2500 ms, which over-determines it: 2500 ms at 300 px/s describes a 750 px radius, and no room in §6
+has a point further than ~418 px from its origin. Honoring both numbers would mean varying the speed
+per room — and a spread that moves faster in a large room than a small one stops reading as one
+physical event crossing the zone, which is the whole reason it propagates at all rather than
+cross-fading. So the speed is fixed and each point warms at `distance ÷ 300 px/s`.
+
+The player only ever watches this once. Restoration fires in R6, which spreads over **~1.3 s** — 266 px
+from the seam at (200, 176) to the far corner, plus the 400 ms settle band. §7 already makes R5, R4, R2
+and R1 warm *on subsequent entry* rather than animating, so their derived durations are never observed
+and do not need to agree with each other.
+
+What the 2500 ms was standing in for survives as a floor: **the farthest point of the room restoration
+fires in must warm at least 700 ms after the origin**, or the spread snaps instead of travelling. R6
+clears this with room to spare. If a re-authored R6 ever breaks it, move the seam or the room bounds —
+not the speed.
 
 ---
 
