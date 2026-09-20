@@ -348,9 +348,22 @@ The player answers it. The same Answer verb used in combat, now used to agree ra
    unacknowledged silence *is* the feedback, and it is the "sting of a phrase falling apart" this
    section asks for. The implementation instinct will be to fill it; do not.
 4. **Adaptive shortening:** after two consecutive failed attempts, the phrase drops to 2 notes. After
-   four, to 1. It never drops below 1. The game meets the player; it does not gate them out.
-5. **On completing the phrase:** the phrase extends — attempt 2 is 4 notes, attempt 3 is 5 notes.
+   four, to 1. It never drops below 1. The game meets the player; it does not gate them out. The
+   thresholds shorten from wherever the player currently is — a player at 4 notes who fails twice
+   drops to 2 — and a completed attempt resets the failure streak.
+5. **On completing the phrase:** the phrase extends by exactly **one note**, to a maximum of 5.
+   Phrase length is a single ladder — 1, 2, 3, 4, 5 — and a completed phrase always climbs exactly
+   one rung of it, from wherever rule 4 left the player. On a clean run that is what this rule always
+   said: attempt 1 is 3 notes, attempt 2 is 4, attempt 3 is 5. A player the shortening dropped to 1
+   climbs 1 → 2 → 3 → 4 → 5 — not straight back to the 3-note base, and not straight to 4.
    Completing **5 consecutive notes** restores the Verse.
+
+   Falling is fast and climbing is one rung at a time, deliberately. There is no fail state (rule 6),
+   so falling costs only time, while the climb is the thing the player is there to hear: length is not
+   a difficulty dial, it is the phrase being rebuilt, growing by a note each time the player holds it.
+   That also keeps rule 4's promise on the rung that needs it most — handing a player who just
+   recovered from four failures a 3-note phrase is a 3× jump at their most fragile moment, which is
+   the gating rule 4 refuses, arriving by the other door.
 6. **No damage. No HP. No fail state. No timer.** Failure costs only time and the sting of a phrase
    falling apart.
 
@@ -464,8 +477,9 @@ runnable artifact:
    With two windows open, a press resolves the soonest-landing attack, the overlay names which tell it
    was attributed to, and the other window stays open and remains answerable.
 4. A successful Answer on a Keening Husk prevents the projectile from spawning at all.
-5. The restoration encounter completes, adapts on repeated failure per §7.4, and cannot damage or kill
-   the player under any input.
+5. The restoration encounter completes, adapts on repeated failure per §7.4, climbs back exactly one
+   note per completed phrase per §7.5 — including from a 1-note phrase, which goes to 2 and not to 3 —
+   and cannot damage or kill the player under any input.
 6. After restoration, Sustain and Return are usable in R6 before leaving.
 7. Sustain tautens membranes and lowers bell-frames per §4.1, and breath exhaustion forces ramp-out.
 8. R7 is impassable before restoration and passable after; its shortcut door opens a real loop back to
