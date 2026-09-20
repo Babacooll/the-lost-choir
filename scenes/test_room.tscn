@@ -1,0 +1,62 @@
+[gd_scene load_steps=6 format=3 uid="uid://d1p5r8x4k2n7w"]
+
+[ext_resource type="PackedScene" uid="uid://b3k4l7dv1m8xq" path="res://scenes/player.tscn" id="1_player"]
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_platform_a"]
+size = Vector2(400, 40)
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_platform_b"]
+size = Vector2(320, 40)
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_ledge"]
+size = Vector2(120, 20)
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_world_bounds"]
+size = Vector2(20, 720)
+
+[node name="TestRoom" type="Node2D"]
+
+[node name="Player" parent="." instance=ExtResource("1_player")]
+position = Vector2(0, 400)
+
+[node name="PlatformA" type="StaticBody2D" parent="."]
+position = Vector2(100, 420)
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="PlatformA"]
+shape = SubResource("RectangleShape2D_platform_a")
+
+[node name="Visual" type="Polygon2D" parent="PlatformA"]
+color = Color(0.32, 0.29, 0.36, 1)
+polygon = PackedVector2Array(-200, -20, 200, -20, 200, 20, -200, 20)
+
+[node name="PlatformB" type="StaticBody2D" parent="."]
+position = Vector2(540, 420)
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="PlatformB"]
+shape = SubResource("RectangleShape2D_platform_b")
+
+[node name="Visual" type="Polygon2D" parent="PlatformB"]
+color = Color(0.32, 0.29, 0.36, 1)
+polygon = PackedVector2Array(-160, -20, 160, -20, 160, 20, -160, 20)
+
+[node name="Ledge" type="StaticBody2D" parent="."]
+position = Vector2(650, 340)
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Ledge"]
+shape = SubResource("RectangleShape2D_ledge")
+
+[node name="Visual" type="Polygon2D" parent="Ledge"]
+color = Color(0.4, 0.35, 0.42, 1)
+polygon = PackedVector2Array(-60, -10, 60, -10, 60, 10, -60, 10)
+
+[node name="LeftBound" type="StaticBody2D" parent="."]
+position = Vector2(-110, 60)
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="LeftBound"]
+shape = SubResource("RectangleShape2D_world_bounds")
+
+[node name="RightBound" type="StaticBody2D" parent="."]
+position = Vector2(710, 60)
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="RightBound"]
+shape = SubResource("RectangleShape2D_world_bounds")
