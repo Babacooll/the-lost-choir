@@ -110,6 +110,12 @@ resolves rather than cuts off — it completes to its interval.
 **On failure (whiff or no press):** the attack resolves normally. 1 damage, 180 px knockback,
 400 ms hitstun, 600 ms invulnerability.
 
+The 180 px is **total displacement**, not the size of the impulse: measured from the player's position
+at the hit to where they come to rest with no player input, ±10 px. Residual velocity carrying them
+further is over-contract. Knockback here is a repositioning cost — it is what decides whether a missed
+Answer puts you outside your own Strike reach or into the next hazard — so the number that must hold is
+where you end up, not how hard you were pushed.
+
 **Overlapping tell windows:** when more than one window is open, the press resolves the tell whose
 attack lands soonest — see §5 shared rule 6 for the full arbitration and tie-breaks.
 
@@ -462,17 +468,24 @@ runnable artifact:
 13. The build runs on **macOS**, launched from a single documented command or double-click. The
     Linux export smoke build stays in CI as a portability check; a second *supported* platform is cut
     (§13).
+14. The R6 text meets §7's delivery contract: one line on screen, 1800 ms minimum hold, index
+    persisting across attempts, and the 1400 ms post-miss silence carrying no sound of any kind.
+
+---
+
 ## 12. Dependencies
 
 | Discipline | Needed for the slice |
 |---|---|
-| **Art** | Slice-scoped art rules; Listener silhouette (provisional); Reed Husk + Keening Husk; Verse-bearer matte→seam states; membrane and bell-frame readable affordances; cold/warm palette pair; the 8 rooms' tileset. |
+| **Art** | Slice-scoped art rules; Listener silhouette (provisional); Reed Husk + Keening Husk; Verse-bearer matte→seam states; membrane and bell-frame readable affordances; cold/warm palette pair; the 7 rooms' tileset. |
 | **Narrative** | This Verse's specific reason for silence; ≤12 words × ≤4 gaps for R6; R8's fragment; zone and room names if different from the working names above. |
 | **Audio** | The unfinished leitmotif phrase + the one interval restoration adds; low drone register for the Verse; percussive and keening tell sounds on a dedicated dry channel; the R6 phrase (5 notes); near-silence ambience for the cold state. |
-| **Engineering** | Everything in §§3–9, plus the debug overlay, save/load of the restoration flag, and a runnable export. |
+| **Engineering** | Everything in §§3–9, plus the debug overlay and a runnable export. (Save/load is cut — see §13.) |
 
 Placeholder art and audio are acceptable for engineering to begin immediately and are expected to be
 replaced by discipline deliverables before playtest. **Engineering must not wait on final assets.**
+
+---
 
 ## 13. Scope reduction — 2026-09-20
 
