@@ -4,3 +4,4 @@
 
 [node name="R7_WarmReturn" instance=ExtResource("1_room")]
 level_id = "R7_WarmReturn"
+pin_warmth = true

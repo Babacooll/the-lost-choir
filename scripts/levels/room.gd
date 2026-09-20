@@ -5,9 +5,20 @@ extends Node2D
 ## scope); Art's real assets replace SolidRect blockouts in a later pass.
 
 @export var level_id: String = ""
+## R7/R8: authored warm-on-first-sight (art doc §4.3) — pinned to w=1 rather
+## than propagating from a seam that doesn't exist in these rooms.
+@export var pin_warmth: bool = false
 
 const DoorScript := preload("res://scripts/levels/door.gd")
-const SOLID_COLOR := Color(0.32, 0.29, 0.36, 1.0)
+const WarmthVisual := preload("res://scripts/art/warmth_visual.gd")
+## Stone family from docs/art/palettes/lost-choir-slice.json, authored warm —
+## the cold column comes from the shader's own derive, not a second constant.
+## Two distinct tones (backdrop vs. solid geometry) rather than one flat
+## colour: a uniform room has ~no luma contrast to measure in either state,
+## which would make §4.4's contrast-rise check untestable regardless of the
+## transform being correct.
+const BACKDROP_COLOR := Color(0x3b / 255.0, 0x2f / 255.0, 0x28 / 255.0, 1.0)  # ST0 deepest crevice
+const SOLID_COLOR := Color(0xcb / 255.0, 0xae / 255.0, 0x8c / 255.0, 1.0)  # ST4 rim / chipped edge
 const GATED_DOOR_COLOR := Color(0.55, 0.4, 0.2, 1.0)
 const OPEN_DOOR_COLOR := Color(0.6, 0.6, 0.7, 0.35)
 
@@ -33,6 +44,17 @@ var player_start: Vector2 = Vector2.ZERO
 var _has_player_start: bool = false
 var _px_wid: float = 0.0
 var _px_hei: float = 0.0
+var _warmth_origin_override: Vector2 = Vector2.ZERO
+var _has_warmth_origin_override: bool = false
+
+## The warmth field's seam origin (art doc §4.2): the Verse-bearer's own
+## position where this room has one (R6), room centre otherwise — every
+## other room still gets the same travelling-wavefront treatment, just
+## without a literal bearer to anchor it to.
+func warmth_origin() -> Vector2:
+	if _has_warmth_origin_override:
+		return _warmth_origin_override
+	return global_position + Vector2(_px_wid * 0.5, _px_hei * 0.5)
 
 func _ready() -> void:
 	if level_id.is_empty():
@@ -76,6 +98,7 @@ func _build_from_ldtk() -> void:
 	_px_wid = level.get("pxWid", 0.0)
 	_px_hei = level.get("pxHei", 0.0)
 	_apply_camera_bounds(_px_wid, _px_hei)
+	_build_backdrop()
 
 	for entity in LDtkProject.get_entities(level, "SolidRect"):
 		_build_solid_rect(entity)
@@ -96,6 +119,20 @@ func _build_from_ldtk() -> void:
 	for entity in LDtkProject.get_entities(level, "Door"):
 		_build_door(entity)
 
+## A full-room backdrop panel so the warmth field has room-filling placeholder
+## material to derive over, rather than only the thin SolidRect blockouts —
+## stands in for background wall/floor art until it lands (checkpoint scope:
+## "build the shader/transform pipeline against whatever placeholder tiles
+## World Builder's rooms currently use").
+func _build_backdrop() -> void:
+	var visual := WarmthVisual.new()
+	visual.color = BACKDROP_COLOR
+	visual.z_index = -10
+	visual.polygon = PackedVector2Array([
+		Vector2(0, 0), Vector2(_px_wid, 0), Vector2(_px_wid, _px_hei), Vector2(0, _px_hei),
+	])
+	add_child(visual)
+
 func _build_solid_rect(entity: Dictionary) -> void:
 	var pos := LDtkProject.entity_position(entity)
 	var width: float = entity.get("width", 16.0)
@@ -112,7 +149,7 @@ func _build_solid_rect(entity: Dictionary) -> void:
 	shape.shape = rect
 	body.add_child(shape)
 
-	var visual := Polygon2D.new()
+	var visual := WarmthVisual.new()
 	visual.color = SOLID_COLOR
 	visual.polygon = PackedVector2Array([
 		Vector2(-half.x, -half.y), Vector2(half.x, -half.y),
@@ -149,6 +186,11 @@ func _maybe_spawn_encounter(marker: Marker2D, encounter_id: String) -> void:
 		return
 	var instance: Node2D = ENCOUNTER_SCENES[encounter_id].instantiate()
 	marker.add_child(instance)
+	if encounter_id == "verse_bearer_r6":
+		# The seam the warmth field originates from (art doc §4.2) is this
+		# encounter's own position, not an authored constant.
+		_warmth_origin_override = marker.global_position
+		_has_warmth_origin_override = true
 
 func _build_door(entity: Dictionary) -> void:
 	var pos := LDtkProject.entity_position(entity)
