@@ -6,19 +6,26 @@ on:
   pull_request:
 
 env:
-  GODOT_VERSION: "4.3"
+  GODOT_VERSION: "4.4"
 
 jobs:
   gut-tests:
     name: Headless GUT tests
     runs-on: ubuntu-latest
     container:
-      image: barichello/godot-ci:4.3
+      image: barichello/godot-ci:4.4
     steps:
       - uses: actions/checkout@v4
 
       - name: Import project
-        run: godot --headless --verbose --path . --import --quit
+        # Run twice: a fresh checkout has no cached .import sidecars, and a
+        # single pass registers new import types (e.g. .wav) without fully
+        # resolving scripts that preload() them yet — surfaces as spurious
+        # "has no resource loaders" SCRIPT ERRORs on autoloads that preload
+        # audio. The second pass is a no-op once everything's cached.
+        run: |
+          godot --headless --verbose --path . --import --quit
+          godot --headless --verbose --path . --import --quit
 
       - name: Run GUT test suite
         run: |
@@ -32,12 +39,19 @@ jobs:
     name: Export smoke build (Linux)
     runs-on: ubuntu-latest
     container:
-      image: barichello/godot-ci:4.3
+      image: barichello/godot-ci:4.4
     steps:
       - uses: actions/checkout@v4
 
       - name: Import project
-        run: godot --headless --verbose --path . --import --quit
+        # Run twice: a fresh checkout has no cached .import sidecars, and a
+        # single pass registers new import types (e.g. .wav) without fully
+        # resolving scripts that preload() them yet — surfaces as spurious
+        # "has no resource loaders" SCRIPT ERRORs on autoloads that preload
+        # audio. The second pass is a no-op once everything's cached.
+        run: |
+          godot --headless --verbose --path . --import --quit
+          godot --headless --verbose --path . --import --quit
 
       - name: Install export templates
         run: |
@@ -48,11 +62,75 @@ jobs:
         run: |
           mkdir -v -p build/linux
           godot --headless --verbose --path . \
-            --export-debug "Linux Smoke Build" build/linux/the-lost-choir.x86_64
+            --export-debug "Linux Smoke Build" build/linux/the-lost-choir.x86_64 \
+            | tee export.log
+
+      - name: Verify the LDtk zone data was actually packed
+        # A raw .ldtk has no Godot importer, so export_filter="all_resources"
+        # silently skips it unless an include_filter says otherwise — this
+        # is exactly the defect that shipped once already (no room could
+        # load). Inspect what the export itself reports it packed, not just
+        # that the export command exited zero.
+        run: |
+          grep -q "the_lost_choir.ldtk" export.log \
+            || { echo "::error::assets/levels/the_lost_choir.ldtk was not packed into the export — check export_presets.cfg's include_filter"; exit 1; }
+          grep -a -q "the_lost_choir.ldtk" build/linux/the-lost-choir.pck \
+            || { echo "::error::the_lost_choir.ldtk is not present in the exported .pck"; exit 1; }
+
+      - name: Launch the exported build headless and check for runtime errors
+        # The guard that would have caught both defects above, plus the
+        # 4.3-only shader syntax that never surfaced because nothing
+        # previously ran the export — only built it. Boots into Zone.tscn
+        # (R1) for a few real seconds, long enough for room-build, the
+        # warmth shader, and every autoload to actually run.
+        run: |
+          chmod +x build/linux/the-lost-choir.x86_64
+          build/linux/the-lost-choir.x86_64 --headless --quit-after 180 > run.log 2>&1 || true
+          cat run.log
+          if grep -qE "SCRIPT ERROR|SHADER ERROR" run.log; then
+            echo "::error::the exported build produced a SCRIPT ERROR or SHADER ERROR at runtime"
+            exit 1
+          fi
 
       - name: Upload smoke build artifact
         uses: actions/upload-artifact@v4
         with:
           name: linux-smoke-build
           path: build/linux/
+          retention-days: 7
+
+  export-macos:
+    name: Export macOS build
+    runs-on: ubuntu-latest
+    container:
+      image: barichello/godot-ci:4.4
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Import project
+        # Run twice: a fresh checkout has no cached .import sidecars, and a
+        # single pass registers new import types (e.g. .wav) without fully
+        # resolving scripts that preload() them yet — surfaces as spurious
+        # "has no resource loaders" SCRIPT ERRORs on autoloads that preload
+        # audio. The second pass is a no-op once everything's cached.
+        run: |
+          godot --headless --verbose --path . --import --quit
+          godot --headless --verbose --path . --import --quit
+
+      - name: Install export templates
+        run: |
+          mkdir -v -p "$HOME/.local/share/godot/export_templates"
+          cp -r /root/.local/share/godot/export_templates/* "$HOME/.local/share/godot/export_templates/"
+
+      - name: Export macOS build
+        run: |
+          mkdir -v -p "build/macos"
+          godot --headless --verbose --path . \
+            --export-debug "macOS" "build/macos/The Lost Choir.app"
+
+      - name: Upload macOS build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: macos-build
+          path: build/macos/
           retention-days: 7
