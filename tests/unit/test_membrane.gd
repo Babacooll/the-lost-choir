@@ -33,9 +33,18 @@ func after_each() -> void:
 	GameState.restoration_complete = false
 
 
+## Steps in small (1 ms) increments — a single huge-delta call would consume
+## the whole ramp window on a state transition alone instead of accumulating
+## hold time within the newly-entered state, same pitfall real per-frame
+## engine ticks avoid by construction.
+func _tick_sustain(ms: float) -> void:
+	for i in range(int(round(ms))):
+		_player.sustain._physics_process(0.001)
+
+
 func _engage_sustain() -> void:
 	_input.action_down(&"sustain")
-	_player.sustain._physics_process(0.2)  # past the 180 ms ramp-in
+	_tick_sustain(200.0)  # past the 180 ms ramp-in
 
 
 func test_slack_by_default() -> void:
@@ -55,7 +64,7 @@ func test_goes_slack_again_once_world_effects_release() -> void:
 	assert_true(_membrane.is_taut())
 
 	_input.action_up(&"sustain")
-	_player.sustain._physics_process(0.15)  # past the 120 ms ramp-out
+	_tick_sustain(150.0)  # past the 120 ms ramp-out
 	await get_tree().physics_frame
 	assert_false(_membrane.is_taut(), "a membrane should go slack once ramp-out completes")
 

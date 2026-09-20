@@ -35,9 +35,18 @@ func after_each() -> void:
 	GameState.restoration_complete = false
 
 
+## Steps in small (1 ms) increments — a single huge-delta call would consume
+## the whole ramp window on a state transition alone instead of accumulating
+## hold time within the newly-entered state, same pitfall real per-frame
+## engine ticks avoid by construction.
+func _tick_sustain(ms: float) -> void:
+	for i in range(int(round(ms))):
+		_player.sustain._physics_process(0.001)
+
+
 func _engage_sustain() -> void:
 	_input.action_down(&"sustain")
-	_player.sustain._physics_process(0.2)
+	_tick_sustain(200.0)  # past the 180 ms ramp-in
 
 
 func test_rests_at_its_authored_high_position_by_default() -> void:
@@ -59,7 +68,7 @@ func test_rises_again_on_ramp_out() -> void:
 	assert_true(_bell.is_descended())
 
 	_input.action_up(&"sustain")
-	_player.sustain._physics_process(0.15)
+	_tick_sustain(150.0)
 	await get_tree().physics_frame
 	assert_false(_bell.is_descended(), "a bell-frame should rise again once ramp-out completes")
 	assert_eq(_bell.position.y, 0.0)
@@ -102,7 +111,7 @@ func test_carries_a_riding_player_up_when_it_rises() -> void:
 
 	var player_y_before: float = _player.global_position.y
 	_input.action_up(&"sustain")
-	_player.sustain._physics_process(0.15)  # past the 120 ms ramp-out — the frame rises
+	_tick_sustain(150.0)  # past the 120 ms ramp-out — the frame rises
 	for i in range(10):
 		await get_tree().physics_frame
 

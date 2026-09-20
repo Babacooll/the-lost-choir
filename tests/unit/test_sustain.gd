@@ -35,8 +35,15 @@ func after_each() -> void:
 	GameState.restoration_complete = false
 
 
+## Steps in small (1 ms) increments rather than one big call — the state
+## machine only evaluates one state's transition per _physics_process call,
+## same as the real engine's per-frame invocation, so a single huge-delta
+## call would consume an entire ramp window on the transition alone instead
+## of accumulating hold time within the newly-entered state.
 func _tick(ms: float) -> void:
-	_sustain._physics_process(ms / 1000.0)
+	var steps := int(round(ms))
+	for i in range(steps):
+		_sustain._physics_process(0.001)
 
 
 func test_unavailable_before_restoration() -> void:
