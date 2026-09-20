@@ -1,0 +1,12 @@
+RENDER LANGUAGE (must match exactly, this is a fixed house style for this batch):
+Flat 2D game asset concept, strictly orthogonal front view — no isometric, no three-quarter, no perspective, no camera tilt. Every material is rendered as FLAT POSTERIZED VALUE STEPS: distinct flat hard-edged color bands (4-5 per material — shadow / body / lit / rim), like a limited-palette indexed illustration. NOT a smooth gradient, NOT airbrushed, NOT painterly continuous blending — each band is one flat, uniform color with a hard boundary to the next band. No ink outline or contour line anywhere; bands separate from each other and from the background by color-value alone. No cast shadow, no floor plane, no backdrop scenery, no vignette, no dramatic studio lighting, no ambient occlusion gradient — the subject sits isolated on a single flat, uniformly toned dark neutral background (flat mid-dark blue-grey, no gradient in the background). Authored in its fully warm, lit-material appearance — never desaturated, never cooled, never tinted toward blue-grey (that is a separate derived state computed later, not something to render now).
+
+Subject: a tileable game floor surface, fired terracotta tile facing (amphitheatre seating-riser cladding), viewed dead-on flat, filling the entire frame edge-to-edge (ignore the isolated-subject-on-dark-background instruction above; this is a material swatch, not an object).
+
+CRITICAL: use the FULL value range across the four terracotta tones, clearly distributed — do not cluster on just two of them. Roughly equal use of: shadow #5c2b1f (a meaningful minority of tiles, not just joints), body #8c3f2a (common), lit #b85a35 (common), rim highlight #d98149 (a handful of standout bright tiles). Adjacent tiles must visibly differ — no two touching tiles the same tone — and the overall field should show real light-to-dark contrast across the surface, not a narrow band of similar orange-browns.
+
+Joints: irregular hand-set tile joints — tiles vary in size (mix of larger and smaller), joints slightly uneven, not a perfect grid, not perfectly rounded corners on every tile. Joint gap is a thin dark line only, not a bold border — value-step separation, no added ink contour on top of it.
+
+Surface detail: a few hairline stress cracks and small chipped corners as soft flat marks, subtle warm mottling on a handful of tiles only.
+
+Forbidden: clustering on only two of the four tones; uniform perfectly regular grid; bright neon color; brass/gold/metal color; glow; text/watermark; photographic realism.

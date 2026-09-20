@@ -1,0 +1,15 @@
+{
+  "provider": "gemini",
+  "model": "gemini-3-pro-image",
+  "interaction_id": "v1_Chd1R3F2YXNmZE1QVy12ZElQajVPSWdRZxIXdUdxdmFzZmRNUFctdmRJUGo1T0lnUWc",
+  "prompt": "Same object, same silhouette, same pose, same flat dark background as the attached reference image (a bell-shaped stone entity, no handle/loop/arch, flat posterized shading) — this is the RESTORED / warm-lit state of the identical object. Keep the exact same crack path geometry, same aperture position and shape, same fitting positions.\n\nChanges from the reference, and ONLY these:\n1. The aperture slot is now open/glowing: filled with warm light color, flat bands only (#fff2c4 hot core at center, #ffc75e body toward the edges) — flat posterized fill, not a radial gradient blur.\n2. The crack (identical path to the reference) now glows: flat #ffc75e along its length with a #fff2c4 flat highlight at 2-3 points along it (not a continuous gradient glow, discrete flat-colored segments).\n3. Exactly 3 thin flowing calligraphic line strokes (plus at most 2 smaller secondary ones) radiate from the crack across the chamber — flat single-pixel-weight colored lines, same warm gold color (#ffc75e), sparse, most of the chamber surface stays completely bare unmarked stone. Do not add more than 5 lines total.\n4. The metal fittings (collar bands, hex bolt, plate) are now lit brass: flat #e0b849, with one small flat #ffe9a3 highlight patch only on the fitting nearest the crack.\n5. The stone body itself KEEPS the same muted flat brown/tan bands as the reference — do not brighten or wash out the whole body into gold. Only the aperture, the crack, the handful of etch lines, and the fittings actually emit light.\n\nNo burst, no shockwave, no starburst, no lens flare, no bloom halo, no rays, no explosion — calm, contained, flat-shaded warm light only.\n\nForbidden: any gradient/blur glow (must stay flat posterized color bands even for the glowing parts); any outline/contour line; any handle/loop/arch; face/eye read; dense decorative line pattern; readable musical notation; neon color; text/watermark.",
+  "references": [
+    "versebearer-dormant-v4.jpg"
+  ],
+  "previous_interaction_id": null,
+  "size": "2K",
+  "aspect_ratio": "3:4",
+  "requested_mime_type": "image/jpeg",
+  "mime_type": "image/jpeg",
+  "transparent": false
+}
