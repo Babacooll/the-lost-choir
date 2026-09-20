@@ -97,13 +97,13 @@ func resolve(stagger_duration_ms: float) -> void:
 	tell_resolved.emit()
 
 
-## Stub attachment point for FMOD's dedicated dry tell channel (§5 shared
-## rule 4 — the tell must never share a channel with ambience/flavor
-## vocalization). Real audio is Technical Artist's later pass; this exists
-## so Reed/Keening wire into a real call site now rather than one that has
-## to be invented later.
+## Attachment point for the dedicated dry tell channel (§5 shared rule 4 —
+## the tell must never share a channel with ambience/flavor vocalization).
+## AudioDirector decides bus routing (TELL for real tells, VOICE for the R6
+## bearer's notes) and scheduling — this call site fires at the exact moment
+## the window opens, which is what "the game clock owns the window" needs.
 func _route_to_dry_channel() -> void:
-	pass
+	AudioDirector.play_tell(self)
 
 
 func _physics_process(delta: float) -> void:

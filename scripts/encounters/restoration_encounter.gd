@@ -108,6 +108,8 @@ func _physics_process(delta: float) -> void:
 
 func _open_note() -> void:
 	_note_elapsed_ms = 0.0
+	AudioDirector.set_encounter_phrase_length(_phrase_length)
+	AudioDirector.set_encounter_note_index(_note_index)
 	_emitter.open_tell(NOTE_LEAD_MS, REGISTER_NAME)
 
 
