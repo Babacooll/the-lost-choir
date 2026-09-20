@@ -247,21 +247,21 @@
               ]
             },
             { "__identifier": "SolidRect", "px": [0, 528], "width": 320, "height": 32, "fieldInstances": [] },
-            { "__identifier": "SolidRect", "px": [40, 480], "width": 96, "height": 16, "fieldInstances": [] },
+            { "__identifier": "SolidRect", "px": [176, 470], "width": 96, "height": 16, "fieldInstances": [] },
             { "__identifier": "SolidRect", "px": [40, 432], "width": 96, "height": 16, "fieldInstances": [] },
             {
               "__identifier": "EnemyMarker", "px": [70, 416], "width": 16, "height": 16,
               "fieldInstances": [{ "__identifier": "enemy_type", "__value": "ReedHusk" }]
             },
-            { "__identifier": "SolidRect", "px": [176, 384], "width": 96, "height": 16, "fieldInstances": [] },
+            { "__identifier": "SolidRect", "px": [40, 374], "width": 96, "height": 16, "fieldInstances": [] },
             { "__identifier": "SolidRect", "px": [176, 336], "width": 96, "height": 16, "fieldInstances": [] },
             {
               "__identifier": "EnemyMarker", "px": [210, 320], "width": 16, "height": 16,
               "fieldInstances": [{ "__identifier": "enemy_type", "__value": "KeeningHusk" }]
             },
-            { "__identifier": "SolidRect", "px": [40, 288], "width": 96, "height": 16, "fieldInstances": [] },
+            { "__identifier": "SolidRect", "px": [176, 278], "width": 96, "height": 16, "fieldInstances": [] },
             { "__identifier": "SolidRect", "px": [40, 240], "width": 96, "height": 16, "fieldInstances": [] },
-            { "__identifier": "SolidRect", "px": [176, 192], "width": 96, "height": 16, "fieldInstances": [] },
+            { "__identifier": "SolidRect", "px": [40, 182], "width": 96, "height": 16, "fieldInstances": [] },
             { "__identifier": "SolidRect", "px": [176, 144], "width": 96, "height": 16, "fieldInstances": [] },
             {
               "__identifier": "Door", "px": [0, 120], "width": 16, "height": 32,
