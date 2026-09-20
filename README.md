@@ -32,9 +32,9 @@ so far and `## Running the project` for how to open it.
 
 ## Running the project (Godot editor)
 
-Requires [Godot 4.3](https://godotengine.org/download) (GDScript, no C# build needed).
+Requires [Godot 4.4](https://godotengine.org/download) (GDScript, no C# build needed).
 
-1. Open Godot 4.3.
+1. Open Godot 4.4.
 2. **Import** → select this repository's `project.godot`.
 3. Press **F5** (or the Play button) to run. The main scene is
    `scenes/levels/Zone.tscn` — the seven-room zone graph (§6 of the design
@@ -62,7 +62,7 @@ The slice exports to a double-clickable `.app` — no editor required (§11 AC#1
 
 **Download a built artifact:** every CI run on `main` produces one — see `## CI-produced builds` below.
 
-**Export it yourself**, from the Godot editor or the command line, once you have Godot 4.3+ and its
+**Export it yourself**, from the Godot editor or the command line, once you have Godot 4.4+ and its
 export templates installed ([godotengine.org/download](https://godotengine.org/download); the editor's
 **Editor → Manage Export Templates** menu fetches them for you):
 
@@ -89,13 +89,17 @@ scope. Gatekeeper will show an "unidentified developer" prompt on first launch; 
 
 `.github/workflows/ci.yml` runs on every push/PR to `main`:
 - **Headless GUT tests** — the full suite under `tests/unit/`.
-- **Export smoke build (Linux)** — a portability check, not a second supported platform (cut in §13);
-  its artifact isn't meant to be played, just proof the project still exports cleanly outside macOS.
-
-The macOS `.app` above is exported locally/on demand rather than as a third CI job — CI runners are
-Linux, and cross-exporting a macOS bundle from there needs the same templates and still can't be
-launched/smoke-tested on that runner, so the Linux job stays the CI-side portability check and the
-macOS export is the one you run to actually play the build.
+- **Export smoke build (Linux)** — a portability check, not a second supported platform (cut in §13).
+  Its artifact isn't meant to be played, but it's the one CI job that can actually *run* what it
+  exports on the runner's own platform — so this is also where CI verifies the export is real: that
+  `assets/levels/the_lost_choir.ldtk` is genuinely packed (checked directly in the export log and the
+  `.pck` itself), and that launching the build headless for a few seconds produces no `SCRIPT ERROR`
+  or `SHADER ERROR`. A macOS `.app` built on a Linux runner can't be launched there to get the same
+  guarantee, which is why this check lives on the Linux job even though macOS is the platform players
+  actually get.
+- **Export macOS build** — produces the same `.app` documented above as a downloadable artifact, built
+  but not run on the runner (Linux can't execute a macOS binary) — its packaging is covered by the
+  Linux job's checks above since both presets export from the same project and resources.
 
 ## Audio
 

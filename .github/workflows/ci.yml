@@ -6,14 +6,14 @@ on:
   pull_request:
 
 env:
-  GODOT_VERSION: "4.3"
+  GODOT_VERSION: "4.4"
 
 jobs:
   gut-tests:
     name: Headless GUT tests
     runs-on: ubuntu-latest
     container:
-      image: barichello/godot-ci:4.3
+      image: barichello/godot-ci:4.4
     steps:
       - uses: actions/checkout@v4
 
@@ -32,7 +32,7 @@ jobs:
     name: Export smoke build (Linux)
     runs-on: ubuntu-latest
     container:
-      image: barichello/godot-ci:4.3
+      image: barichello/godot-ci:4.4
     steps:
       - uses: actions/checkout@v4
 
@@ -48,7 +48,35 @@ jobs:
         run: |
           mkdir -v -p build/linux
           godot --headless --verbose --path . \
-            --export-debug "Linux Smoke Build" build/linux/the-lost-choir.x86_64
+            --export-debug "Linux Smoke Build" build/linux/the-lost-choir.x86_64 \
+            | tee export.log
+
+      - name: Verify the LDtk zone data was actually packed
+        # A raw .ldtk has no Godot importer, so export_filter="all_resources"
+        # silently skips it unless an include_filter says otherwise — this
+        # is exactly the defect that shipped once already (no room could
+        # load). Inspect what the export itself reports it packed, not just
+        # that the export command exited zero.
+        run: |
+          grep -q "the_lost_choir.ldtk" export.log \
+            || { echo "::error::assets/levels/the_lost_choir.ldtk was not packed into the export — check export_presets.cfg's include_filter"; exit 1; }
+          strings build/linux/the-lost-choir.pck | grep -q "the_lost_choir.ldtk" \
+            || { echo "::error::the_lost_choir.ldtk is not present in the exported .pck"; exit 1; }
+
+      - name: Launch the exported build headless and check for runtime errors
+        # The guard that would have caught both defects above, plus the
+        # 4.3-only shader syntax that never surfaced because nothing
+        # previously ran the export — only built it. Boots into Zone.tscn
+        # (R1) for a few real seconds, long enough for room-build, the
+        # warmth shader, and every autoload to actually run.
+        run: |
+          chmod +x build/linux/the-lost-choir.x86_64
+          build/linux/the-lost-choir.x86_64 --headless --quit-after 180 > run.log 2>&1 || true
+          cat run.log
+          if grep -qE "SCRIPT ERROR|SHADER ERROR" run.log; then
+            echo "::error::the exported build produced a SCRIPT ERROR or SHADER ERROR at runtime"
+            exit 1
+          fi
 
       - name: Upload smoke build artifact
         uses: actions/upload-artifact@v4
@@ -61,7 +89,7 @@ jobs:
     name: Export macOS build
     runs-on: ubuntu-latest
     container:
-      image: barichello/godot-ci:4.3
+      image: barichello/godot-ci:4.4
     steps:
       - uses: actions/checkout@v4
 
