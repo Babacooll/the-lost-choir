@@ -267,6 +267,33 @@ Brass takes a different path on purpose, and that difference *is* the "dormant m
 Which gives the one-line rule: **in the cold state the world's warmth lives in *reflectance*
 only; not one pixel of it is *emitted*.** Dormant metal, not absent metal.
 
+### 4.1b State versus warmth — what "derived" does and does not cover
+
+The derive rule governs the **warmth axis only**. It does not mean an entity gets exactly one
+authored image.
+
+An entity that changes *state* — geometry, material occupancy, what is open or closed, what is
+present or absent — gets one authored source **per state**, and every one of those sources is
+authored warm. The §4.1 transform then runs over whichever state is on screen.
+
+The Verse-bearer is the case that forces the distinction, so it is worth naming concretely:
+
+- `versebearer_dormant` — closed aperture, dust, crack as `VD0` void, fittings dull but still
+  brass. Authored warm; displayed at `w = 0` before restoration, and that is where its cold read
+  comes from.
+- `versebearer_restored` — open aperture, emissive seam, etchings. Authored warm; only ever
+  displayed at `w = 1`.
+
+Two states, two warm sources, one derive. What is **not** permitted is hand-painting a cold
+appearance. The moment cold is authored, the palette's cold column and the shader stop agreeing,
+and the only place that disagreement surfaces is the §4.4 gate or a playtest.
+
+**Corollary: dormant brass is dull brass, not verdigris.** Cold `BR1`/`BR2` derive to `#514936`
+and `#7a7153` — desaturated olive-brown *metal*. Verdigris (`BZ2`, `#6f8f74`) is a different
+material: a copper corrosion product with its own story about age and neglect. Substituting it
+for cold brass breaks the dormant-metal claim at the root, because the player must see the same
+metal unlit and then lit, not one metal swapped for another.
+
 ### 4.2 The warmth field
 
 A single scalar `w ∈ [0,1]` per pixel drives everything: `rendered = lerp(cold(albedo),
@@ -590,6 +617,18 @@ and wired in LDtk. A room is composed from families; it does not get bespoke til
 
 Budget: **5 families × 47 tiles = 235 base tiles**, plus ~40 decoration tiles and 2 parallax
 backdrop layers. Anything above that is scope the slice did not ask for.
+
+**Field value spread.** Within a tiled field, adjacent tiles vary by **at most one ramp step**
+(`ST2` beside `ST1` or `ST3`; never `ST1` beside `ST4`). The full five-step range is spent on
+*features* — a chipped edge, a lintel, a broken riser — not on the field. A field that uses its
+whole ramp becomes a checkerboard, and a checkerboard costs the two-step subject/ground
+separation §2 R4 requires: the Listener reads cleanly against half the blocks and disappears
+against the other half.
+
+**Joint regularity.** Joints are irregular, and tile sizes vary within a family. A surface whose
+joints form an unbroken regular grid reads as manufactured tiling — the wrong material story for
+a place that has been standing and weathering. A uniform dark grout line is a contour line by
+another name (§2 R4), whatever it is called.
 
 ### What each room's art must do
 
