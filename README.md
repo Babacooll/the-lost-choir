@@ -6,6 +6,7 @@ Approved creative direction: `docs/creative-direction.md`.
 Approved technical direction: `ARCHITECTURE.md`.
 
 Slice-scoped art direction: `docs/art/vertical-slice-art-direction.md`.
+Remaining art work for a human artist: `docs/art/aseprite-handoff.md`.
 
 Vertical-slice implementation is in progress; see `## Status` below for what's landed
 so far and `## Running the project` for how to open it.
