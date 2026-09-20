@@ -18,6 +18,7 @@ config/icon="res://icon.svg"
 [autoload]
 
 GameState="*res://scripts/state/game_state.gd"
+WarmthField="*res://scripts/state/warmth_field.gd"
 ZoneManager="*res://scripts/levels/zone_manager.gd"
 DebugOverlay="*res://scenes/debug_overlay.tscn"
 

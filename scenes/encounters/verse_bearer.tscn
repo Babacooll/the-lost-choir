@@ -1,11 +1,14 @@
-[gd_scene load_steps=2 format=3 uid="uid://dqf1n8k0y3x9m"]
+[gd_scene load_steps=3 format=3 uid="uid://dqf1n8k0y3x9m"]
 
 [ext_resource type="Script" path="res://scripts/encounters/restoration_encounter.gd" id="1_verse_bearer"]
+[ext_resource type="Script" path="res://scripts/art/warmth_visual.gd" id="2_warmth_visual"]
 
 [node name="VerseBearer" type="Node2D"]
 script = ExtResource("1_verse_bearer")
 
 [node name="Visual" type="Polygon2D" parent="."]
+script = ExtResource("2_warmth_visual")
+is_brass = true
 color = Color(0.4, 0.4, 0.45, 1)
 polygon = PackedVector2Array(-10, -36, 10, -36, 10, 0, -10, 0)
 

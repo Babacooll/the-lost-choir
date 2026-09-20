@@ -1,6 +1,7 @@
-[gd_scene load_steps=3 format=3 uid="uid://c8m1r4n0k5x3w"]
+[gd_scene load_steps=4 format=3 uid="uid://c8m1r4n0k5x3w"]
 
 [ext_resource type="Script" path="res://scripts/world/membrane.gd" id="1_membrane"]
+[ext_resource type="Script" path="res://scripts/art/warmth_visual.gd" id="2_warmth_visual"]
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_membrane"]
 size = Vector2(64, 8)
@@ -14,5 +15,6 @@ one_way_collision = true
 disabled = true
 
 [node name="Visual" type="Polygon2D" parent="."]
+script = ExtResource("2_warmth_visual")
 color = Color(0.5, 0.3, 0.45, 0.85)
 polygon = PackedVector2Array(-32, -4, 32, -4, 32, 4, -32, 4)
