@@ -202,7 +202,17 @@ contract, which this document now makes concrete for the slice.
    already heard from other enemies in the room. From the 3rd tell onward, lead time is
    `round(base × 0.88^(n-2))`, clamped to a floor of **420 ms**. Compute each rung from the base
    value — never compound the rounded one — so Audio, Engineering and the debug overlay agree to the
-   millisecond. The counter resets after 6 s with that instance out of combat.
+   millisecond. **The counter resets only after 6 s during which that instance is not aggroed on the
+   player.** Out of combat means disengaged, not merely quiet: an enemy that is chasing, or in range
+   and recovering, is in combat however long it has been since its last tell, and its counter holds.
+   The 6 s is continuous — re-aggroing at 5 s restarts it, it does not resume. Rationale: a Reed Husk
+   walks 60 px/s against a 170 px/s player and there is 180 px between its aggro range and its lunge
+   reach, so resetting on tell-silence instead would let a player hold the ramp at base indefinitely
+   while never actually disengaging — and the ramp is the pressure H6 is being stress-tested with.
+   The way out is to break away and stay away, which costs ground and reads as a decision; circling
+   inside aggro range is not that. A counter that holds across a long chase is correct rather than
+   punishing: the per-instance rule above already guaranteed this voice was heard twice at base, so a
+   compressed tell after a gap is a known voice sped up, not an unlearnable one.
 
    | Tell # | 1 | 2 | 3 | 4 | 5 | 6 | 7+ |
    |---|---|---|---|---|---|---|---|
@@ -448,7 +458,9 @@ runnable artifact:
 3. Answer succeeds against both enemy types when pressed inside the tell window, and the debug overlay
    demonstrates the window matches §5 within ±16 ms — including the compressed rungs: a sustained
    encounter drives a Reed to 420 ms by its 4th tell and a Keening to 420 ms by its 6th, and an enemy
-   joining late still tells at base lead.
+   joining late still tells at base lead. The ramp also **holds across a chase**: an enemy kept
+   aggroed but out of reach for 6 s or more still tells at its reached rung, and only 6 s continuously
+   disengaged returns it to base.
    With two windows open, a press resolves the soonest-landing attack, the overlay names which tell it
    was attributed to, and the other window stays open and remains answerable.
 4. A successful Answer on a Keening Husk prevents the projectile from spawning at all.
