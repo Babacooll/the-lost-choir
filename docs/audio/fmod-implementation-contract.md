@@ -68,12 +68,38 @@ because every asset measures correctly in isolation.
 | parameter | scope | range | drives |
 |---|---|---|---|
 | `VerseLowDroneRestored` | global, **saved** | 0 / 1 | leitmotif grounding layer; warm ambience; Sustain and Return availability |
-| `PaletteWarmth` | per-room | 0 → 1 over 2500 ms | ambience crossfade, reverb character; shares the art lerp (spec §8) |
+| `PaletteWarmth` | per-room | 0 → 1, **duration derived, not fixed** (see §4.0) | ambience crossfade, reverb character; shares the art lerp (spec §8) |
 | `TellLead` | per-event instance | 420–800 ms | **stretches the tell gesture to fill its lead** |
 | `TellRepeat` | per-encounter | 0 / 1 | selects the compressed lead (bible §10.2) |
 | `BreathRemaining` | global | 1 → 0 | drone tremor and thinning in the last 600 ms |
 | `EncounterPhraseLength` | R6 | 1–5 | how many notes the bearer offers |
 | `EncounterNoteIndex` | R6 | 1–5 | which note is sounding |
+
+### 4.0 `PaletteWarmth` has no authored duration
+
+**Do not build this ramp to a fixed length.** Spec §8 fixes the *speed* of the cold→warm spread —
+300 px/s from the room's warmth origin, linear in distance — and lets the duration fall out of it.
+An earlier revision of this row said "0 → 1 over 2500 ms"; §8 no longer contains that number, and
+the shipped visual lerp is roughly twice as fast, so building to 2500 ms would have desynchronised
+the ambience from the picture it exists to sit inside.
+
+Drive the parameter from the same field the visuals read — `scripts/state/warmth_field.gd`, one
+global elapsed clock shared by every room — sampled at the listener, per audio frame:
+
+- each point warms at `distance ÷ 300 px/s` after restoration begins;
+- a 24 px leading band sweeps that point (80 ms at the fixed speed), then a 400 ms settle;
+- in R6, where restoration actually fires, the far corner lands at **~1.3 s** total;
+- §8's floor: the farthest point of that room must warm **at least 700 ms** after the origin. If a
+  future re-author breaks that, the room moves — the speed does not.
+
+Two audio-side rules on top of the shared field:
+
+- **Clamp to 1.0.** The visual field overshoots to 1.15 before settling; that bloom is a picture
+  effect. An ambience crossfade or reverb send that overshoots reads as a level error, not as
+  warmth.
+- **Smooth in FMOD, don't re-time.** Any parameter seek speed you set is anti-zipper smoothing
+  only, and must stay well under the 80 ms band sweep — it is not a second, slower ramp layered on
+  the derived one.
 
 ### 4.1 `TellLead` is the one that matters
 
