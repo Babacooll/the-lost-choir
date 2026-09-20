@@ -20,9 +20,13 @@ func before_each() -> void:
 	_player.sustain.set_physics_process(false)
 
 	_bell = BellFrameScene.instantiate()
-	add_child_autofree(_bell)
-	_bell.global_position = Vector2(50, 0)
+	# Position and low_offset must be set BEFORE the node enters the tree —
+	# _ready() captures the authored (high/rest) position from wherever the
+	# node sits at that moment, matching room.gd's real spawn order
+	# (position set, then add_child), not the reverse.
+	_bell.position = Vector2(50, 0)
 	_bell.low_offset = Vector2(0, 100)
+	add_child_autofree(_bell)
 	_bell.set_player(_player)
 
 	_input = InputSender.new(Input)

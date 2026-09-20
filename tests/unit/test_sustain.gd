@@ -12,20 +12,32 @@ const PlayerScript := preload("res://scripts/player/player.gd")
 
 var _player: CharacterBody2D
 var _sustain
+var _floor: StaticBody2D
 var _input
 
 
 func before_each() -> void:
 	GameState.restoration_complete = true
 
+	_floor = StaticBody2D.new()
+	var floor_shape := CollisionShape2D.new()
+	var floor_rect := RectangleShape2D.new()
+	floor_rect.size = Vector2(2000, 40)
+	floor_shape.shape = floor_rect
+	_floor.add_child(floor_shape)
+	_floor.position = Vector2(0, 40)
+	get_tree().root.add_child(_floor)
+	autofree(_floor)
+
 	_player = PlayerScene.instantiate()
 	add_child_autofree(_player)
-	_player.global_position = Vector2(0, 0)
+	_player.global_position = Vector2(0, 20)  # resting exactly on the floor's top surface
 
 	_sustain = _player.sustain
 	_sustain.set_physics_process(false)
 
 	_input = InputSender.new(Input)
+	await get_tree().physics_frame
 	await get_tree().physics_frame
 
 
@@ -102,9 +114,16 @@ func test_breath_drains_while_held_and_forces_ramp_out_when_exhausted() -> void:
 	_tick(2800.0)  # 3000 ms total held -> breath exhausted
 	assert_almost_eq(_sustain.breath_ms, 0.0, 1.0)
 
+	# Exhaustion is treated exactly like a release — it still gets the same
+	# 120 ms ramp-out grace, not an instant cutoff — so world effects are
+	# still active for a moment, then release once that grace elapses too.
 	_tick(1.0)
-	assert_false(_sustain.world_effects_active(),
+	assert_eq(_sustain.state, _sustain.State.RAMPING_OUT,
 		"breath exhausting mid-traversal must force the ramp-out even with input still held (§4.1)")
+	assert_true(_sustain.world_effects_active(), "the ramp-out grace still applies to a forced release")
+
+	_tick(121.0)
+	assert_false(_sustain.world_effects_active(), "world effects release once the forced ramp-out's grace elapses")
 
 
 func test_refill_waits_500ms_after_release_then_refills_at_1_5x_over_2000ms() -> void:
@@ -125,7 +144,7 @@ func test_refill_waits_500ms_after_release_then_refills_at_1_5x_over_2000ms() ->
 
 
 func test_run_speed_is_0_85x_while_world_effects_are_active() -> void:
-	_player.global_position = Vector2(200, 0)
+	_player.global_position = Vector2(200, 20)
 	_input.action_down(&"sustain")
 	_tick(200.0)  # ACTIVE, frozen there since sustain's own processing is manual
 
