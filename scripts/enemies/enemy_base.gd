@@ -52,11 +52,22 @@ func _ready() -> void:
 
 
 func _find_player() -> void:
+	if player != null:
+		return  # already set explicitly (e.g. by a test) — don't override it
 	var players := get_tree().get_nodes_in_group("player")
 	if not players.is_empty():
-		player = players[0]
-		if "combat" in player:
-			player_combat = player.combat
+		set_player(players[0])
+
+
+## Lets a caller (a test, or a future spawner) wire the player directly
+## instead of going through the deferred group lookup — useful anywhere
+## multiple Player instances might transiently coexist in the "player" group
+## (e.g. rapid test teardown/setup), where group order isn't a reliable way
+## to pick "the" player.
+func set_player(p: CharacterBody2D) -> void:
+	player = p
+	if "combat" in player:
+		player_combat = player.combat
 
 
 ## Called by Strike (duck-typed, same contract as the player's own hit
@@ -76,15 +87,7 @@ func _die() -> void:
 	queue_free()
 
 
-var _diag_ticks: int = 0
-
 func _physics_process(delta: float) -> void:
-	if _diag_ticks < 15:
-		_diag_ticks += 1
-		print("DIAG enemy tick #%d state=%d player=%s player_combat=%s dist=%s aggro=%s now=%s" % [
-			_diag_ticks, state, player, player_combat,
-			(_distance_to_player() if player != null else "n/a"), aggro_range_px(), Time.get_ticks_msec(),
-		])
 	if _dead or player == null:
 		return
 

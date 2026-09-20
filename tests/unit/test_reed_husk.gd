@@ -28,6 +28,12 @@ func before_each() -> void:
 	_reed = ReedHuskScene.instantiate()
 	add_child_autofree(_reed)
 	_reed.global_position = Vector2(300, 16)
+	# Wire the player directly rather than relying on the deferred
+	# group-lookup autodiscovery — with tests churning through Player
+	# instances rapidly, more than one can transiently be in the "player"
+	# group at once, and group order isn't a reliable way to pick this
+	# test's own instance.
+	_reed.set_player(_player)
 
 	_input = InputSender.new(Input)
 	await get_tree().physics_frame
