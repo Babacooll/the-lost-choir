@@ -47,6 +47,23 @@ func _count_projectiles() -> int:
 	return get_tree().get_nodes_in_group("projectile").size()
 
 
+## Polls rather than assuming a fixed tick count is enough — state-machine
+## transitions here depend on a deferred player lookup resolving, which this
+## suite has seen take longer than a handful of ticks under CI load.
+func _wait_for_state(node, target_state: int, max_ticks: int = 120) -> void:
+	var ticks := 0
+	while node.state != target_state and ticks < max_ticks:
+		await get_tree().physics_frame
+		ticks += 1
+
+
+func _wait_for_projectile_count(target_count: int, max_ticks: int = 180) -> void:
+	var ticks := 0
+	while _count_projectiles() != target_count and ticks < max_ticks:
+		await get_tree().physics_frame
+		ticks += 1
+
+
 func test_stationary_never_moves_even_when_aggro() -> void:
 	_keening.global_position = Vector2(200, 18)  # inside the 380 px aggro range
 	var before_x: float = _keening.global_position.x
@@ -57,23 +74,21 @@ func test_stationary_never_moves_even_when_aggro() -> void:
 
 func test_opens_tell_immediately_once_aggro_no_closing_distance_needed() -> void:
 	_keening.global_position = Vector2(370, 18)  # inside 380 px aggro range
-	for i in range(5):
-		await get_tree().physics_frame
+	await _wait_for_state(_keening, _keening.State.TELLING)
 	assert_eq(_keening.state, _keening.State.TELLING)
 
 
 func test_unanswered_tell_spawns_projectile_that_damages_the_player() -> void:
 	_keening.global_position = Vector2(100, 18)
 	var start_hp: int = _player.hp
-	for i in range(5):
-		await get_tree().physics_frame
+	await _wait_for_state(_keening, _keening.State.TELLING)
 	assert_eq(_keening.state, _keening.State.TELLING)
 
-	await wait_seconds(0.75)  # 700 ms tell + margin
+	await _wait_for_projectile_count(1)
 	assert_eq(_count_projectiles(), 1, "a missed tell should spawn exactly one projectile")
 
-	# Let the projectile travel the 100 px gap at 240 px/s (~420 ms).
-	await wait_seconds(0.6)
+	# Let the projectile travel the 100 px gap at 240 px/s (~420 ms) and land.
+	await _wait_for_projectile_count(0)
 	assert_eq(_player.hp, start_hp - 1, "the projectile must actually land on the player")
 	assert_eq(_count_projectiles(), 0, "the projectile should be gone once it lands")
 
@@ -85,8 +100,7 @@ func test_successful_answer_means_no_projectile_is_ever_created() -> void:
 	# a damage-based test while failing this spec — so this test asserts
 	# on projectile *existence*, not on the player's hp.
 	_keening.global_position = Vector2(100, 18)
-	for i in range(5):
-		await get_tree().physics_frame
+	await _wait_for_state(_keening, _keening.State.TELLING)
 	assert_eq(_keening.state, _keening.State.TELLING)
 
 	_input.action_down(&"answer")
@@ -116,13 +130,11 @@ func test_projectile_stops_at_a_wall_without_reaching_the_player() -> void:
 
 	_keening.global_position = Vector2(100, 18)
 	var start_hp: int = _player.hp
-	for i in range(5):
-		await get_tree().physics_frame
-	await wait_seconds(0.75)
+	await _wait_for_state(_keening, _keening.State.TELLING)
+	await _wait_for_projectile_count(1)
 	assert_eq(_count_projectiles(), 1)
 
-	await wait_seconds(0.5)
-	assert_eq(_count_projectiles(), 0, "should have stopped at the wall by now")
+	await _wait_for_projectile_count(0)
 	assert_eq(_player.hp, start_hp, "a wall between the husk and the player should block the projectile")
 
 

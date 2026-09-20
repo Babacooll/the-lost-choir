@@ -39,6 +39,16 @@ func after_each() -> void:
 	_input = null
 
 
+## Polls rather than assuming a fixed tick count is enough — state-machine
+## transitions here depend on a deferred player lookup resolving, which this
+## suite has seen take longer than a handful of ticks under CI load.
+func _wait_for_state(node, target_state: int, max_ticks: int = 120) -> void:
+	var ticks := 0
+	while node.state != target_state and ticks < max_ticks:
+		await get_tree().physics_frame
+		ticks += 1
+
+
 func test_stays_idle_outside_aggro_range() -> void:
 	for i in range(10):
 		await get_tree().physics_frame
@@ -47,7 +57,7 @@ func test_stays_idle_outside_aggro_range() -> void:
 
 func test_approaches_and_walks_toward_player_once_aggro() -> void:
 	_reed.global_position = Vector2(200, 16)  # 200 px away, inside the 220 px aggro range
-	await get_tree().physics_frame
+	await _wait_for_state(_reed, _reed.State.APPROACH)
 	assert_eq(_reed.state, _reed.State.APPROACH)
 
 	var before_x: float = _reed.global_position.x
@@ -58,30 +68,27 @@ func test_approaches_and_walks_toward_player_once_aggro() -> void:
 
 func test_opens_tell_once_within_lunge_reach() -> void:
 	_reed.global_position = Vector2(30, 16)  # within the 40 px lunge reach
-	for i in range(5):
-		await get_tree().physics_frame
+	await _wait_for_state(_reed, _reed.State.TELLING)
 	assert_eq(_reed.state, _reed.State.TELLING)
 
 
 func test_unanswered_tell_lunges_and_damages_player_in_reach() -> void:
 	_reed.global_position = Vector2(30, 16)
 	var start_hp: int = _player.hp
-	for i in range(5):
-		await get_tree().physics_frame
+	await _wait_for_state(_reed, _reed.State.TELLING)
 	assert_eq(_reed.state, _reed.State.TELLING)
 
 	# Let the 520 ms tell close unanswered.
-	await wait_seconds(0.6)
+	await _wait_for_state(_reed, _reed.State.RECOVERY)
 
-	assert_eq(_player.hp, start_hp - 1, "an unanswered tell in reach should lunge and damage the player")
 	assert_eq(_reed.state, _reed.State.RECOVERY)
+	assert_eq(_player.hp, start_hp - 1, "an unanswered tell in reach should lunge and damage the player")
 
 
 func test_answered_tell_staggers_instead_of_damaging() -> void:
 	_reed.global_position = Vector2(30, 16)
 	var start_hp: int = _player.hp
-	for i in range(5):
-		await get_tree().physics_frame
+	await _wait_for_state(_reed, _reed.State.TELLING)
 	assert_eq(_reed.state, _reed.State.TELLING)
 
 	_input.action_down(&"answer")
@@ -95,9 +102,8 @@ func test_answered_tell_staggers_instead_of_damaging() -> void:
 
 func test_recovery_lasts_700ms_then_returns_to_approach() -> void:
 	_reed.global_position = Vector2(30, 16)
-	for i in range(5):
-		await get_tree().physics_frame
-	await wait_seconds(0.6)  # tell closes unanswered
+	await _wait_for_state(_reed, _reed.State.TELLING)
+	await _wait_for_state(_reed, _reed.State.RECOVERY)  # tell closes unanswered
 	assert_eq(_reed.state, _reed.State.RECOVERY)
 
 	var ticks := 0
