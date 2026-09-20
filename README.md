@@ -17,7 +17,9 @@ so far and `## Running the project` for how to open it.
   (engine: Godot 4; audio runtime: FMOD Studio integration)
 - Vertical-slice implementation: in progress, against
   `docs/design/vertical-slice.md`. Checkpoint 1 (project bootstrap, player movement,
-  debug overlay, CI skeleton) is in this repository.
+  debug overlay, CI skeleton), checkpoint 2 (Strike, Answer, input buffering,
+  scripted dummy tell emitter), and the seven-room zone graph (§6, LDtk-into-Godot
+  pipeline) are in this repository.
 
 ## Running the project (Godot editor)
 
@@ -29,11 +31,18 @@ Requires [Godot 4.3](https://godotengine.org/download) (GDScript, no C# build ne
    `scenes/levels/Zone.tscn` — the seven-room zone graph (§6 of the design
    spec), authored in `assets/levels/the_lost_choir.ldtk` and built at
    runtime by `scripts/levels/room.gd`. It boots into R1, The Cold Step.
-   `scenes/test_room.tscn` is still present for isolated player-movement
-   exercises (§3.1) but is no longer the main scene.
 
-Controls: `A`/`D` or `←`/`→` to move, `Space` to jump, `F3` to toggle the debug
-overlay (off by default).
+   `scenes/test_room.tscn` is no longer the main scene, but is still present
+   and still the place to open directly (Godot editor → open the scene → F6,
+   or set it as the run scene temporarily) for isolated testing: a flat
+   platform, one gap, and one raised ledge to exercise player movement
+   (§3.1), plus a scripted dummy tell emitter to exercise Answer (§3.3)
+   against. It is not reachable from `Zone.tscn`'s default run.
+
+Controls: `A`/`D` or `←`/`→` to move, `Space` to jump, `J` to Strike, `K` to
+Answer, `F3` to toggle the debug overlay (off by default; plots the tell
+window against your Answer presses). `T` additionally opens a manual tell
+window on `test_room.tscn`'s dummy emitter — that scene only.
 
 Running the CI-produced export build will be documented once the export pipeline lands
 (see `.github/workflows/ci.yml` for the current smoke-build step).
