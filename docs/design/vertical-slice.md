@@ -12,7 +12,8 @@ playable metroidvania loop?** It is deliberately small. Content beyond this docu
 
 ## 1. Scope
 
-One zone, eight rooms, one silenced Verse, two enemy types, one ability gate, one secret.
+One zone, **seven rooms**, one silenced Verse, two enemy types, one ability gate, one secret.
+Single session — no save/load. See §13 for what was cut on 2026-09-20 and why.
 
 Target play length: **12–18 minutes** for a first-time player, including one or two failed
 restoration attempts. Not a demo of breadth — a demo of whether the loop lands.
@@ -268,23 +269,23 @@ in trouble and that is a finding worth having.
 
 ---
 
-## 6. Zone layout — eight rooms
+## 6. Zone layout — seven rooms
 
 Authored in LDtk per `ARCHITECTURE.md`. Camera: per-room bounds, no scrolling across doors.
 
 ```
-                    [R8] secret
-                      |
-   [R1]--[R2]--[R3]--[R4]--[R5]--[R6]
-     \                 |          /
-      \______[R7]______|_________/   (opens only after the Verse)
+                 [R8] secret
+                   |
+   [R1]--[R2]--[R4]--[R5]--[R6]
+     \            |          /
+      \__[R7]_____|_________/   (opens only after the Verse)
 ```
 
 | Room | Player intent | Teaches / tests | Gate |
 |---|---|---|---|
 | **R1 — The Cold Step** | "Where am I, and does moving feel good?" | Run, jump, coyote, corner correction. Near-silent ambience. No enemy. | — |
-| **R2 — Reed Gallery** | "What can I do to the world?" | Strike, on a passive cracked husk that does not fight back. | — |
-| **R3 — The First Answer** | "Something is speaking at me." | One Reed Husk, isolated, wide floor, no pit. Answer taught here or nowhere. | — |
+| **R2 — Reed Gallery** | "What can I do to the world?" → "Something is speaking at me." | Strike, on a passive cracked husk that does not fight back, in the entry half. Then **one** Reed Husk in the far half — wide flat floor, no pit, no second enemy. Answer is taught here or nowhere. The two beats stay sequenced by floor layout rather than by a door. | — |
+| ~~R3~~ | *cut 2026-09-20 — folded into R2 (§13). The label is retired, not reused: R4–R8 keep their numbers so in-flight work and open PRs stay valid.* | — | — |
 | **R4 — Membrane Hall** | "I can see where I can't go." | Slack membranes; a visibly unreachable upper ledge leading to R5's high route and to R8. A shortcut door to R7, barred from this side. | Sustain (visible, unusable) |
 | **R5 — The Colonnade** | "This is harder and I'm exposed." | Vertical pipe-organ climb. One Reed Husk on a mid-ledge, one Keening Husk above it. Falling costs progress, not life. | — |
 | **R6 — The Cold Amphitheater** | "Someone is here, and they stopped." | The Verse-bearer. The restoration encounter (§7). | — |
@@ -292,7 +293,7 @@ Authored in LDtk per `ARCHITECTURE.md`. Camera: per-room bounds, no scrolling ac
 | **R8 — The Cracked Bell** | "I wonder." | Optional. Reached from R4's high ledge using Sustain + a breath-tight route. Contains a narrative fragment only — **no ability, no upgrade, no collectible counter.** | Sustain + execution |
 
 ### Critical path
-R1 → R2 → R3 → R4 → R5 → R6 → *(restoration)* → R7 → R4/R1.
+R1 → R2 → R4 → R5 → R6 → *(restoration)* → R7 → R4/R1.
 
 ### Optional path
 R4 high ledge → R8. Requires Sustain, so it is only available on the return leg — the player must
@@ -300,9 +301,14 @@ R4 high ledge → R8. Requires Sustain, so it is only available on the return le
 
 ### Teaching beats
 Each mechanic is introduced in a room where failing it costs nothing, then immediately reused in a
-room where it costs something. Strike: taught R2 (no stakes) → used R3 (stakes). Answer: taught R3
-(flat floor) → used R5 (height, two enemies). Sustain: taught R6 exit (flat) → used R7 (breath
-budget) → mastered R8 (breath-tight).
+room where it costs something. Strike: taught in R2's entry half on a husk that cannot retaliate →
+used in R2's far half against one that can. Answer: taught in R2's far half (flat floor, single enemy,
+no pit) → used in R5 (height, two enemies, falling costs progress). Sustain: taught at the R6 exit
+(flat) → used in R7 (breath budget) → mastered in R8 (breath-tight).
+
+Folding R3 into R2 shortens the gap between teaching Strike and demanding Answer. That is acceptable
+because both beats keep their stakes-free floor; if a playtester reports R2 as *crowded* rather than as
+*paced*, splitting it back out is the first fix to reach for and costs one room.
 
 **No room may be decorated to look complete.** Every screen in this slice must serve a row of this
 table. If a space serves none, cut it.
@@ -449,18 +455,13 @@ runnable artifact:
 9. R8 is reachable only with Sustain and contains a narrative fragment and nothing else.
 10. Cold→warm meets §8's side-by-side test for at least R6 and R4.
 11. The leitmotif ambient mix gains one interval at restoration and retains it across a room
-    transition and a save/load. Verify this **by ear and by a 30–200 Hz band measurement, not by a
-    loudness meter**: the restoration is a +51 dB low-band event at −0.1 LU integrated, so a tester
-    checking levels will correctly report that nothing happened. Loading a restored save starts warm
-    with no fade-in — the world must not re-restore itself on every load.
+    transition. Verify this **by ear and by a 30–200 Hz band measurement, not by a loudness meter**:
+    the restoration is a +51 dB low-band event at −0.1 LU integrated, so a tester checking levels will
+    correctly report that nothing happened. (Save/load persistence is cut — see §13.)
 12. The debug overlay ships in the build, toggleable, default off.
-13. The build runs on macOS and one other desktop platform, launched from a single documented command
-    or double-click.
-14. The R6 text meets §7's delivery contract: one line on screen, 1800 ms minimum hold, index
-    persisting across attempts, and the 1400 ms post-miss silence carrying no sound of any kind.
-
----
-
+13. The build runs on **macOS**, launched from a single documented command or double-click. The
+    Linux export smoke build stays in CI as a portability check; a second *supported* platform is cut
+    (§13).
 ## 12. Dependencies
 
 | Discipline | Needed for the slice |
@@ -472,3 +473,38 @@ runnable artifact:
 
 Placeholder art and audio are acceptable for engineering to begin immediately and are expected to be
 replaced by discipline deliverables before playtest. **Engineering must not wait on final assets.**
+
+## 13. Scope reduction — 2026-09-20
+
+Cut by the Game Designer after the first day of production. Checkpoint 1 of 9 merged in 47 minutes
+and then the chain stalled for 6h25m, so the slice was re-cut against elapsed reality rather than
+against the day-one plan. Nothing here weakens a hypothesis in §1 — every cut is a thing that was
+*production*, not *evidence*.
+
+| Cut | Was | Why it is not evidence |
+|---|---|---|
+| **Save/load** | AC#11 required the restored leitmotif to survive a save/load; a save system was a checkpoint of its own | The slice is a 12–18 minute single sitting. No hypothesis in §1 concerns persistence. `ARCHITECTURE.md` already fixed the save design (`Resource`-based, flat); building it proves nothing the slice is asking. |
+| **Second supported platform** | AC#13 required macOS plus one other desktop OS | Two export targets is release work. The Linux CI smoke build already catches portability rot. H1–H7 are answered by one person playing one build. |
+| **R3 (The First Answer)** | Its own room, teaching Answer | R2 already had a flat, stakes-free floor and a passive husk. Sequencing the two beats across a floor rather than across a door costs nothing pedagogically and removes a room. |
+
+**Not cut, and deliberately so:** the Keening Husk (H6 is the game's signature audio hypothesis and it
+needs two data points), R8's power-free secret (H7 is unusual enough to be worth testing, and it reuses
+Sustain rather than adding a system), and the adaptive restoration encounter (§7 *is* the thesis).
+
+### Where review rigor belongs
+
+Checkpoint 1 took three independent re-derivation rounds. That rigor was correct — it caught a real
+directional corner-correction defect — and it is correct again for anything a player feels as fairness
+and cannot see: **§3.1 movement, §3.3 Answer, and §5 tell timing**. Those numbers are load-bearing and
+unfalsifiable by feel.
+
+It is *not* proportionate for room geometry, the palette lerp, UI marks, or the secret's route. Those
+fail visibly the moment someone plays them, so normal review catches them at a fraction of the cost.
+Which contracts are load-bearing is a Design call and this is it; **how** to review them stays
+Engineering's.
+
+### Parallelism
+
+Nothing about R1–R8's geometry depends on the internals of Strike or Answer, and the restoration
+encounter needs only Answer, which merged on 2026-09-19. World-building and §7 do not belong behind the
+enemy checkpoints in a serial chain.
