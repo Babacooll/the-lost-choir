@@ -317,8 +317,9 @@ albedo, w)`, brass emission `= w`, seam colours visible only where `w > 0`.
 | Property | Value |
 |---|---|
 | Origin | the Verse-bearer's seam (a point, not the room centre) |
-| Propagation speed | 300 px/s (design spec §7) |
-| Full duration | 2500 ms (design spec §7) |
+| Propagation speed | 300 px/s — the contract (design spec §8) |
+| Full duration | *derived*, never authored: each point warms at `distance ÷ 300 px/s`. In R6 — the only room the spread is ever watched in (§7) — the far corner is 266 px from the seam, so the wavefront lands at ~890 ms and the room is settled at ~1.37 s (design spec §8, "~1.3 s"). |
+| Duration floor | the farthest point of the room restoration fires in must warm **≥ 700 ms** after the origin, or the spread snaps instead of travelling. R6's 890 ms clears it. Fix a violation by moving the seam or the room bounds — never by changing the speed (design spec §8). |
 | Wavefront band | 24 px wide leading edge |
 | Band overshoot | `w` peaks at **1.15** in the band, settling to 1.0 over 400 ms behind it |
 | Band effect on brass | overshoot applies to **emission only**; albedo clamps at 1.0 |
@@ -572,7 +573,8 @@ the voice are the same thing.
 - **What they are not:** notation. No staves, no clefs, no noteheads, nothing transcribable
   (§2 forbidden motifs). A musician must not be able to read them.
 - **How they grow:** along authored spline paths, drawn on progressively, at **40 px/s**, so the
-  full extent lands inside R6's 2500 ms room lerp and the etchings and the room warm *together*.
+  full extent (~48 px) lands at ~1320 ms, inside R6's ~1.3 s room lerp (§4.2), and the etchings
+  and the room warm *together*.
 - **Where they stop:** on the bearer and on the stone within ~48 px of it. They do not crawl
   across the whole room — their edge is the evidence that the warmth has a source.
 - **Colour:** `SM1` body, `SM2` only in the crack core, never `SM0` alone.
@@ -585,9 +587,9 @@ the voice are the same thing.
 |---|---|
 | 0 | Last note answered. The crack's `VD0` interior goes to `SM2` along its whole length in one frame — no fade-in |
 | 0–400 | Seam brightens to full; `Light2D` ramps in; brass **within 48 px** lights first |
-| 0–2500 | Warmth wavefront travels at 300 px/s from the seam (§4.2) |
-| 120–2500 | Etchings draw on at 40 px/s |
-| 2500–3200 | Settle: overshoot band resolves, seam drops to a slow ±6% value breath (1 cycle / 2.4 s) |
+| 0–~890 | Warmth wavefront travels at 300 px/s from the seam (§4.2), reaching R6's far corner (266 px) at ~890 ms. These endpoints are *derived* from the speed and R6's authored size — they are not authored durations, and they move if R6 is re-authored (§4.2 duration floor) |
+| 120–~1320 | Etchings draw on at 40 px/s, ~48 px extent |
+| ~890–~1370 | Settle: each point's overshoot band resolves 80 ms + 400 ms behind the wavefront, so the last point lands at ~1370 ms; seam then drops to a slow ±6% value breath (1 cycle / 2.4 s) |
 
 **No fanfare.** No burst, no shockwave ring, no screen flash, no particle bloom, no star-wipe.
 Design spec §7: the encounter must land on *agreement*, not victory. The art of restoration is a
