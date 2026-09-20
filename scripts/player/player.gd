@@ -128,6 +128,14 @@ func take_hit(damage: int, knockback_dir: Vector2, knockback_px: float, hitstun_
 func _update_hit_reaction(delta_ms: float) -> void:
 	if hitstun_timer_ms > 0.0:
 		hitstun_timer_ms = maxf(0.0, hitstun_timer_ms - delta_ms)
+		if hitstun_timer_ms <= 0.0:
+			# §3.3: the 180 px knockback is measured to where the player
+			# comes to rest with no input, not the impulse itself. Residual
+			# velocity carrying past hitstun end under normal deceleration
+			# would drift the landing spot past the contracted distance, so
+			# control returns from a standing start rather than a coast-out.
+			velocity.x = 0.0
+			knockback_velocity_x = 0.0
 	if invuln_timer_ms > 0.0:
 		invuln_timer_ms = maxf(0.0, invuln_timer_ms - delta_ms)
 

@@ -127,6 +127,24 @@ func test_invulnerability_blocks_a_second_hit_immediately_after() -> void:
 	assert_eq(_player.hp, start_hp - 1, "a second hit inside the invulnerability window must be ignored")
 
 
+func test_knockback_distance_to_rest_matches_180px_not_the_impulse() -> void:
+	# §3.3 (post-ruling): 180 px is measured from the hit position to where
+	# the player comes to rest with no input, not the impulse size — residual
+	# velocity carrying past hitstun end must not drift the landing spot
+	# beyond the contracted ±10 px band.
+	_player.global_position = Vector2(500, 0)
+	var start_x: float = _player.global_position.x
+	_player.take_hit(1, Vector2.LEFT, 180.0, 400.0, 600.0)
+
+	# Run well past hitstun end and let any residual motion settle (no input held).
+	for i in range(90):
+		await get_tree().physics_frame
+
+	var distance_to_rest: float = start_x - _player.global_position.x
+	assert_almost_eq(distance_to_rest, 180.0, 10.0,
+		"knockback must come to rest ~180 px away, not drift past it on residual velocity")
+
+
 func test_resolved_note_holds_for_1200ms_then_expires() -> void:
 	var combat = _player.combat
 	_emitter.open_tell(300.0)
