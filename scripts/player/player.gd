@@ -36,7 +36,13 @@ const FALL_GRAVITY: float = RISE_GRAVITY * FALL_GRAVITY_MULT
 # horizontal clip tolerance (CORNER_CORRECTION_PX above), not this.
 const CORNER_PROBE_MIN_LOOKAHEAD: float = 1.0
 
+## §3.4 health/failure contract (minimal support for Answer's failure effects
+## this checkpoint — no death/respawn behavior yet, that's a later checkpoint).
+const MAX_HP: int = 5
+
 @onready var collision_shape: CollisionShape2D = $CollisionShape2D
+# PlayerCombat is combat.gd's global class_name — no preload needed to type this.
+@onready var combat: PlayerCombat = get_node_or_null("Combat")
 
 var coyote_timer: float = 0.0
 var jump_buffer_timer: float = 0.0
@@ -49,11 +55,29 @@ var jump_cut_applied: bool = false
 # read as a mid-rise release.
 var jump_cut_eligible: bool = false
 
+# Facing direction: +1 right, -1 left. Drives Strike's reach direction and
+# knockback direction on a failed Answer. Updated on horizontal input only,
+# so it holds steady while airborne/idle rather than snapping to 1.0.
+var facing: float = 1.0
+
+# Hit-reaction state, driven by take_hit() (see Answer's §3.3 failure effects).
+var hp: int = MAX_HP
+var hitstun_timer_ms: float = 0.0
+var invuln_timer_ms: float = 0.0
+var knockback_velocity_x: float = 0.0
+
 # Exposed for the debug overlay (checkpoint 3 just needs a readout).
 var debug_state: String = "idle"
 
 func _physics_process(delta: float) -> void:
-	_apply_horizontal_movement(delta)
+	var delta_ms := delta * 1000.0
+	_update_hit_reaction(delta_ms)
+
+	if hitstun_timer_ms > 0.0:
+		velocity.x = knockback_velocity_x
+	else:
+		_apply_horizontal_movement(delta)
+
 	# Buffer/coyote resolution runs before gravity so a jump that launches this
 	# tick is evaluated against this tick's freshly-sampled input, not last
 	# frame's stale jump_held.
@@ -75,9 +99,45 @@ func _apply_horizontal_movement(delta: float) -> void:
 	var input_dir := Input.get_axis("move_left", "move_right")
 
 	if input_dir != 0.0:
+		facing = signf(input_dir)
 		velocity.x = move_toward(velocity.x, RUN_MAX_SPEED * input_dir, ACCEL * delta)
 	else:
 		velocity.x = move_toward(velocity.x, 0.0, DECEL * delta)
+
+
+## Applies a hit's damage/knockback/hitstun/invulnerability. Ignored while
+## already invulnerable. Knockback is a constant horizontal velocity held for
+## the hitstun duration, sized so total displacement matches knockback_px —
+## the design contract (e.g. §3.3's Answer failure) specifies distance and
+## duration, not a curve, so a flat-velocity impulse is the direct reading of
+## those two numbers. Callers own their own damage/knockback/timing constants;
+## this method just applies whatever it's given.
+func take_hit(damage: int, knockback_dir: Vector2, knockback_px: float, hitstun_ms: float, invuln_ms: float) -> void:
+	if invuln_timer_ms > 0.0:
+		return
+	hp = maxi(0, hp - damage)
+	hitstun_timer_ms = hitstun_ms
+	invuln_timer_ms = invuln_ms
+	var dir_x := signf(knockback_dir.x) if knockback_dir.x != 0.0 else -facing
+	var speed := 0.0
+	if hitstun_ms > 0.0:
+		speed = knockback_px / (hitstun_ms / 1000.0)
+	knockback_velocity_x = dir_x * speed
+
+
+func _update_hit_reaction(delta_ms: float) -> void:
+	if hitstun_timer_ms > 0.0:
+		hitstun_timer_ms = maxf(0.0, hitstun_timer_ms - delta_ms)
+		if hitstun_timer_ms <= 0.0:
+			# §3.3: the 180 px knockback is measured to where the player
+			# comes to rest with no input, not the impulse itself. Residual
+			# velocity carrying past hitstun end under normal deceleration
+			# would drift the landing spot past the contracted distance, so
+			# control returns from a standing start rather than a coast-out.
+			velocity.x = 0.0
+			knockback_velocity_x = 0.0
+	if invuln_timer_ms > 0.0:
+		invuln_timer_ms = maxf(0.0, invuln_timer_ms - delta_ms)
 
 
 func _apply_gravity(delta: float) -> void:
@@ -116,8 +176,12 @@ func _handle_jump_buffer_and_coyote(delta: float) -> void:
 	elif jump_buffer_timer > 0.0:
 		jump_buffer_timer -= delta
 
-	# Jump buffer consumes on the first frame ground contact is true (incl. moving platforms).
-	var can_jump := is_on_floor() or coyote_timer > 0.0
+	# Jump buffer consumes on the first frame ground contact is true (incl.
+	# moving platforms). Strike locks Jump out during its startup/active
+	# frames (§3.2: "not cancellable during startup") — the buffered request
+	# simply waits, same as it would for a floor that hasn't arrived yet.
+	var jump_locked_by_combat := combat != null and combat.is_jump_locked()
+	var can_jump := (is_on_floor() or coyote_timer > 0.0) and not jump_locked_by_combat
 	if jump_buffer_timer > 0.0 and can_jump:
 		velocity.y = -JUMP_VELOCITY
 		jump_buffer_timer = 0.0

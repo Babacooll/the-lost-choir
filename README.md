@@ -17,7 +17,8 @@ so far and `## Running the project` for how to open it.
   (engine: Godot 4; audio runtime: FMOD Studio integration)
 - Vertical-slice implementation: in progress, against
   `docs/design/vertical-slice.md`. Checkpoint 1 (project bootstrap, player movement,
-  debug overlay, CI skeleton) is in this repository.
+  debug overlay, CI skeleton) and checkpoint 2 (Strike, Answer, input buffering,
+  scripted dummy tell emitter) are in this repository.
 
 ## Running the project (Godot editor)
 
@@ -27,10 +28,13 @@ Requires [Godot 4.3](https://godotengine.org/download) (GDScript, no C# build ne
 2. **Import** → select this repository's `project.godot`.
 3. Press **F5** (or the Play button) to run. The main scene is
    `scenes/test_room.tscn` — a flat platform, one gap, and one raised ledge to
-   exercise player movement (§3.1 of the design spec).
+   exercise player movement (§3.1 of the design spec), plus a scripted dummy
+   tell emitter to exercise Answer (§3.3) against.
 
-Controls: `A`/`D` or `←`/`→` to move, `Space` to jump, `F3` to toggle the debug
-overlay (off by default).
+Controls: `A`/`D` or `←`/`→` to move, `Space` to jump, `J` to Strike, `K` to
+Answer, `T` to manually open a tell window on the dummy emitter, `F3` to
+toggle the debug overlay (off by default; plots the tell window against your
+Answer presses).
 
 Running the CI-produced export build will be documented once the export pipeline lands
 (see `.github/workflows/ci.yml` for the current smoke-build step).
