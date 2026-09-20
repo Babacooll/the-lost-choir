@@ -109,6 +109,14 @@ resolves rather than cuts off — it completes to its interval.
 **On failure (whiff or no press):** the attack resolves normally. 1 damage, 180 px knockback,
 400 ms hitstun, 600 ms invulnerability.
 
+**Overlapping tell windows:** when more than one window is open, the press resolves the tell whose
+attack lands soonest — see §5 shared rule 6 for the full arbitration and tie-breaks.
+
+**Resolved notes do not stack.** A second successful Answer inside an existing 1200 ms window
+*refreshes* that window; it does not grant a second Return. One resolved note, one Return, spent by
+using Strike. Back-to-back Answers on two overlapping windows are meant to reward reading, not to
+bank a double-damage burst.
+
 Design intent: whiffing costs 220 ms of recovery, which is long enough to be punished by a second
 enemy but never long enough to feel like a death sentence. Mashing Answer is a losing strategy
 against a 520 ms tell but is not instantly fatal — it degrades, it does not cliff.
@@ -182,12 +190,50 @@ contract, which this document now makes concrete for the slice.
    the telegraph — there is no separate narrow sub-window.
 2. The identifying transient — the part that tells you *which* attack this is — lands in the first
    **160 ms** of the tell.
-3. Repeat compression: the 3rd and subsequent tell within one uninterrupted encounter compresses to
-   **88%** of base lead time, floor 420 ms. Resets after 6 s out of combat.
+3. **Repeat compression is iterative, not a single step.** The counter is **per enemy instance**, not
+   per encounter: every enemy's first two tells play at base lead, however many tells the player has
+   already heard from other enemies in the room. From the 3rd tell onward, lead time is
+   `round(base × 0.88^(n-2))`, clamped to a floor of **420 ms**. Compute each rung from the base
+   value — never compound the rounded one — so Audio, Engineering and the debug overlay agree to the
+   millisecond. The counter resets after 6 s with that instance out of combat.
+
+   | Tell # | 1 | 2 | 3 | 4 | 5 | 6 | 7+ |
+   |---|---|---|---|---|---|---|---|
+   | Reed Husk | 520 | 520 | 458 | **420** | 420 | 420 | 420 |
+   | Keening Husk | 700 | 700 | 616 | 542 | 477 | **420** | 420 |
+
+   Rationale: read as a single 88% step the 420 ms floor is unreachable in this slice and is therefore
+   dead text. Iterative makes it load-bearing — the Reed reaches it on its 4th tell, the Keening on its
+   6th — and turns a one-off step into the pressure ramp the rule was for. The per-instance counter
+   exists so a player's **first** hearing of a voice is always at base lead; an enemy that joins an
+   encounter late must not tell at a compressed rate the player has had no chance to learn.
+
+   The two enemies converge on the same 420 ms floor under sustained pressure. This is intended: H6
+   is formed in the first two tells of every encounter, which are always at base, and the compressed
+   tail is the stress test rather than the teaching. Register still distinguishes them at the floor.
+
+   Whiff recovery is 220 ms (§3.3), so even at 420 ms a whiffed Answer leaves time for a second press.
+   The floor degrades the player; it never cliffs them.
 4. The tell plays on a **dedicated dry channel**, never shared with ambience or flavor vocalization.
    An enemy whose tell is inaudible under the mix is a bug, not a tuning preference.
 5. No enemy may begin a tell while another enemy's tell is open *and* within 200 ms of its onset —
    tells stagger so two open windows are always distinguishable. (Slice-wide encounter rule.)
+6. **Two tell windows may legally be open at once**, and rule 5 does not prevent it — it only keeps
+   their onsets apart. When they overlap, an Answer press resolves **the open tell whose attack
+   resolves soonest**, not the one that opened first and not the nearest enemy. Ties break on nearest
+   enemy by centre distance, then on lowest entity id so the result is deterministic and reproducible
+   in a bug report. The other window takes **no penalty** and stays open: Answer recovery on success
+   is 0 ms (§3.3), so answering both in sequence is legal and is the intended skill expression.
+   Rationale: resolving to a further enemy while the nearer note is landing reads as a bug in a game
+   about listening. Left to fall out of array order this would be a per-build coin flip.
+7. **A tell may not fade in, and may not contain dead air.** The identifying transient requires an
+   attack of ≤ 15 ms; a 60 ms swell — the instinctive choice for a sung tell — misses the 160 ms
+   budget in rule 2. Equally, lead time must be audible as *travel*: a 700 ms tell that is 160 ms of
+   identity followed by 540 ms of nothing teaches "this enemy pauses," not "this enemy is slower,"
+   and H6 rests on that distinction rather than on the two numbers. Compressed rungs (rule 3) are
+   produced by **uniformly time-stretching the gesture**, never by truncating or padding a
+   fixed-length asset. The 160 ms budget is an absolute ceiling, not a proportion — a compressed
+   tell landing its identity earlier is correct. (Audio Director finding, promoted to design rule.)
 
 ### 5.1 Reed Husk — percussive / throat register, melee
 
@@ -276,6 +322,9 @@ The player answers it. The same Answer verb used in combat, now used to agree ra
    pacing — generous, this is not a reflex test).
 2. **Response.** The player must Answer each note inside its window. Notes are spaced 1100 ms apart.
 3. **On a missed note:** the phrase stops. A 1400 ms silence. The bearer re-offers **from the start**.
+   That silence is **scored empty** — no miss sound, no soft negative cue, no stinger, nothing. The
+   unacknowledged silence *is* the feedback, and it is the "sting of a phrase falling apart" this
+   section asks for. The implementation instinct will be to fill it; do not.
 4. **Adaptive shortening:** after two consecutive failed attempts, the phrase drops to 2 notes. After
    four, to 1. It never drops below 1. The game meets the player; it does not gate them out.
 5. **On completing the phrase:** the phrase extends — attempt 2 is 4 notes, attempt 3 is 5 notes.
@@ -286,8 +335,33 @@ The player answers it. The same Answer verb used in combat, now used to agree ra
 ### Narrative delivery
 The bearer's reason for going silent is delivered **in the gaps between notes** — one short line per
 gap, so the player learns why this voice stopped *while* they are learning its phrase. No cutscene,
-no log, no expository wall. (Content owned by Narrative Designer; this spec fixes the delivery slot
-and the budget: **≤12 words per gap, 4 gaps maximum**.)
+no log, no expository wall. Content is owned by Narrative Designer; this spec fixes the delivery slot
+and the budget: **≤12 words per line, 4 lines total**.
+
+The literal gap between a note resolving and the next note's tell onset is 1100 − 700 = **400 ms**,
+which no readable line fits in. The 1100 ms spacing is load-bearing — it is what makes the phrase read
+as a phrase — so the spacing does not move and the text extends past the gap instead:
+
+1. **One line on screen at a time**, minimum hold **1800 ms**, fading over its final 300 ms. A line
+   therefore crosses the following note's tell window by design. It is rendered text, never voiced —
+   the bearer's only sound is sung.
+2. A queued line is released at the **first gap onset at or after the previous line's minimum hold
+   expires**. Lines consequently land on roughly every other gap. Nothing is dropped; the queue only
+   ever runs slower, never shorter.
+3. **The line index persists across attempts.** A broken phrase does not rewind the text — each of the
+   4 lines is seen exactly once, in order, however many attempts it takes.
+4. **The 1400 ms post-miss silence counts as a gap** (§7.3). A struggling player therefore receives the
+   story *faster*, and a player the adaptive shortening has dropped to a 1-note phrase still has
+   somewhere to receive it. This is the only concession failure earns and it is deliberate.
+5. **Once the lines are spent the encounter is wordless**, and there is no text on the restoration
+   itself — no title card, no name, no "Verse restored". The seam, the interval and the room's
+   temperature are the payoff.
+
+On a clean run this puts the 4th line — the encounter's thesis, the bearer's request — in the first
+gap of the phrase that actually restores the Verse, with the remaining notes silent. The encounter
+still ends on music and agreement rather than on being told something.
+
+This text is the one sanctioned exception to the diegetic UI budget in §9.
 
 ### On restoration
 - The crack becomes the light source: a warm gold seam with calligraphic wave etchings spreading from
@@ -329,7 +403,10 @@ different **to someone who has not played the game**. If it needs explaining, it
 - No minimap in the slice. H4 must be tested against the player's actual memory of space. A minimap
   would answer H4 for them and invalidate the result.
 - Debug overlay (per `ARCHITECTURE.md`): tell window vs. actual input press, toggleable, off by
-  default in the delivered build. This is required from the first playable, not retrofitted.
+  default in the delivered build. This is required from the first playable, not retrofitted. When
+  windows overlap it must also show **which tell a press was attributed to** (§5 shared rule 6) and
+  the **current compression rung** per enemy instance (§5 shared rule 3) — without these, correct
+  arbitration and correct compression are indistinguishable from bugs in a playtest report.
 
 ---
 
@@ -357,7 +434,11 @@ runnable artifact:
    beyond controls.
 2. Movement matches §3.1 within ±16 ms / ±4 px, verified against the debug overlay.
 3. Answer succeeds against both enemy types when pressed inside the tell window, and the debug overlay
-   demonstrates the window matches §5 within ±16 ms.
+   demonstrates the window matches §5 within ±16 ms — including the compressed rungs: a sustained
+   encounter drives a Reed to 420 ms by its 4th tell and a Keening to 420 ms by its 6th, and an enemy
+   joining late still tells at base lead.
+   With two windows open, a press resolves the soonest-landing attack, the overlay names which tell it
+   was attributed to, and the other window stays open and remains answerable.
 4. A successful Answer on a Keening Husk prevents the projectile from spawning at all.
 5. The restoration encounter completes, adapts on repeated failure per §7.4, and cannot damage or kill
    the player under any input.
@@ -368,10 +449,15 @@ runnable artifact:
 9. R8 is reachable only with Sustain and contains a narrative fragment and nothing else.
 10. Cold→warm meets §8's side-by-side test for at least R6 and R4.
 11. The leitmotif ambient mix gains one interval at restoration and retains it across a room
-    transition and a save/load.
+    transition and a save/load. Verify this **by ear and by a 30–200 Hz band measurement, not by a
+    loudness meter**: the restoration is a +51 dB low-band event at −0.1 LU integrated, so a tester
+    checking levels will correctly report that nothing happened. Loading a restored save starts warm
+    with no fade-in — the world must not re-restore itself on every load.
 12. The debug overlay ships in the build, toggleable, default off.
 13. The build runs on macOS and one other desktop platform, launched from a single documented command
     or double-click.
+14. The R6 text meets §7's delivery contract: one line on screen, 1800 ms minimum hold, index
+    persisting across attempts, and the 1400 ms post-miss silence carrying no sound of any kind.
 
 ---
 
