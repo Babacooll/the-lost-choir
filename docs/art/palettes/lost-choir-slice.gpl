@@ -1,0 +1,36 @@
+GIMP Palette
+Name: Lost Choir Slice (warm)
+Columns: 8
+#
+ 59  47  40	ST0 deepest crevice
+ 90  70  56	ST1 shadow
+128 100  80	ST2 body
+168 135 107	ST3 lit face
+203 174 140	ST4 rim / chipped edge
+141 122  94	WX0 shadow
+189 168 128	WX1 body
+222 208 168	WX2 lit
+244 236 208	WX3 highest value in the kit
+ 92  43  31	TC0 shadow
+140  63  42	TC1 body
+184  90  53	TC2 lit
+217 129  73	TC3 rim
+ 47  58  51	BZ0 shadow
+ 77  97  82	BZ1 body
+111 143 116	BZ2 verdigris bloom
+157 191 162	BZ3 verdigris lit crust
+ 43  38  33	HK0 frame shadow
+ 79  69  58	HK1 frame body
+124 109  90	HK2 membrane dried
+178 162 136	HK3 membrane lit / taut
+ 20  22  28	VD0 interior black
+ 35  38  47	VD1 near-black
+ 51  58  71	VD2 ambient floor
+ 74  51  18	BR0 deep seat
+125  90  29	BR1 shadow
+185 140  44	BR2 body
+224 184  73	BR3 lit face
+255 233 163	BR4 specular -- legal only where w > 0
+255 154  60	SM0 outer bleed
+255 199  94	SM1 body
+255 242 196	SM2 core

@@ -5,6 +5,8 @@ Project home for **The Lost Choir**, an original 2D Metroidvania.
 Approved creative direction: `docs/creative-direction.md`.
 Approved technical direction: `ARCHITECTURE.md`.
 
+Slice-scoped art direction: `docs/art/vertical-slice-art-direction.md`.
+
 Vertical-slice implementation is in progress; see `## Status` below for what's landed
 so far and `## Running the project` for how to open it.
 
