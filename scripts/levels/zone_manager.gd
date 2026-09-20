@@ -41,3 +41,8 @@ func travel(level_id: String, door_id: String) -> void:
 	var player := get_tree().get_first_node_in_group("player")
 	if player != null:
 		player.global_position = room.get_door_spawn_position(door_id)
+
+	# Ambience layers crossfade at doors (audio contract §6); the leitmotif/
+	# drone bed itself is zone-scoped and never restarts here — AudioDirector
+	# only ever fades its own two persistent players' volumes.
+	AudioDirector.on_room_entered(room)

@@ -199,6 +199,7 @@ func _execute_return() -> void:
 	# The note is spent the instant it's returned — a second Strike press
 	# during what's left of the same window must not Return it again.
 	resolved_note_timer_ms = 0.0
+	AudioDirector.on_return_executed()
 	return_executed.emit(target)
 
 

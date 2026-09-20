@@ -19,6 +19,7 @@ config/icon="res://icon.svg"
 
 GameState="*res://scripts/state/game_state.gd"
 WarmthField="*res://scripts/state/warmth_field.gd"
+AudioDirector="*res://scripts/audio/audio_director.gd"
 ZoneManager="*res://scripts/levels/zone_manager.gd"
 DebugOverlay="*res://scenes/debug_overlay.tscn"
 

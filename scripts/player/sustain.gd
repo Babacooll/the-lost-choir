@@ -69,9 +69,16 @@ func _physics_process(delta: float) -> void:
 				_hold_elapsed_ms += delta_ms
 				if _hold_elapsed_ms >= RAMP_IN_MS:
 					state = State.ACTIVE
+					# Audio bible §3: the engage partial is the player's only
+					# readout for this otherwise-invisible gate, so it must
+					# fire on this exact same tick, not via a signal a frame
+					# later.
+					AudioDirector.on_sustain_engaged()
 					world_effect_engaged.emit()
 		State.ACTIVE:
 			if not held:
+				if breath_ms <= 0.0:
+					AudioDirector.on_sustain_breath_exhausted()
 				state = State.RAMPING_OUT
 				_release_elapsed_ms = 0.0
 		State.RAMPING_OUT:
@@ -81,8 +88,10 @@ func _physics_process(delta: float) -> void:
 				_release_elapsed_ms += delta_ms
 				if _release_elapsed_ms >= RAMP_OUT_MS:
 					state = State.IDLE
+					AudioDirector.on_sustain_released()
 					world_effect_released.emit()
 
+	AudioDirector.set_breath_remaining(breath_fraction())
 	_tick_breath(delta_ms, held)
 
 
