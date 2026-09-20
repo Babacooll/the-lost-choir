@@ -76,7 +76,15 @@ func _die() -> void:
 	queue_free()
 
 
+var _diag_ticks: int = 0
+
 func _physics_process(delta: float) -> void:
+	if _diag_ticks < 15:
+		_diag_ticks += 1
+		print("DIAG enemy tick #%d state=%d player=%s player_combat=%s dist=%s aggro=%s now=%s" % [
+			_diag_ticks, state, player, player_combat,
+			(_distance_to_player() if player != null else "n/a"), aggro_range_px(), Time.get_ticks_msec(),
+		])
 	if _dead or player == null:
 		return
 
