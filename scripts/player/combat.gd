@@ -44,7 +44,16 @@ signal answer_resolved(emitter: TellEmitter, press_ms: float)
 signal answer_whiffed(press_ms: float)
 
 @onready var player: CharacterBody2D = get_parent()
-@onready var strike_hitbox: Area2D = get_node_or_null("../StrikeHitbox")
+
+# The hitbox is created at runtime and added as a SIBLING of the player (not
+# a child of it) — an Area2D parented under the player's CharacterBody2D
+# reliably failed to detect a stationary body it was fully overlapping
+# (confirmed against a from-scratch control Area2D with identical geometry/
+# layer/mask that worked correctly outside that parentage), while only ever
+# reporting the player's own touching collider. Root cause not fully
+# isolated; decoupling the hitbox from the CharacterBody2D's node hierarchy
+# is the fix that actually restores detection.
+var strike_hitbox: Area2D
 
 var strike_state: int = StrikeState.IDLE
 var _strike_timer_ms: float = 0.0
@@ -68,11 +77,23 @@ var last_answer_result: String = ""  # "success" | "whiff" | ""
 
 
 func _ready() -> void:
-	if strike_hitbox != null:
-		strike_hitbox.monitoring = false
-		var col_shape := strike_hitbox.get_node_or_null("CollisionShape2D")
-		if col_shape != null:
-			col_shape.disabled = true
+	strike_hitbox = Area2D.new()
+	strike_hitbox.name = "StrikeHitbox"
+	strike_hitbox.monitorable = false
+	strike_hitbox.monitoring = false
+	var col_shape := CollisionShape2D.new()
+	col_shape.name = "CollisionShape2D"
+	var rect := RectangleShape2D.new()
+	rect.size = Vector2(STRIKE_REACH_PX, STRIKE_HITBOX_HEIGHT_PX)
+	col_shape.shape = rect
+	col_shape.disabled = true
+	strike_hitbox.add_child(col_shape)
+	player.get_parent().add_child(strike_hitbox)
+
+
+func _exit_tree() -> void:
+	if is_instance_valid(strike_hitbox):
+		strike_hitbox.queue_free()
 
 
 func register_tell_emitter(emitter: TellEmitter) -> void:
@@ -153,16 +174,11 @@ func _open_strike_hitbox() -> void:
 	var reach_center := collider_half_width + STRIKE_REACH_PX * 0.5
 	# Vertical center matches the player collider's own vertical center
 	# (CollisionShape2D sits at local y = -20 for the 40 px-tall collider).
-	strike_hitbox.position = Vector2(facing * reach_center, -20.0)
-	var col_shape := strike_hitbox.get_node_or_null("CollisionShape2D")
-	if col_shape != null and col_shape.shape is RectangleShape2D:
-		col_shape.shape.size = Vector2(STRIKE_REACH_PX, STRIKE_HITBOX_HEIGHT_PX)
+	# Positioned in global space since the hitbox is a sibling of the player,
+	# not a child — see the strike_hitbox declaration for why.
+	strike_hitbox.global_position = player.global_position + Vector2(facing * reach_center, -20.0)
 	strike_hitbox.monitoring = true
-	# The shape itself starts disabled (see _ready/_close_strike_hitbox), not
-	# just unmonitored — a shape that was already overlapping something when
-	# monitoring turns on doesn't reliably produce a fresh "entered" pair, so
-	# each activation needs the shape to genuinely newly enter the physics
-	# world rather than merely start being watched.
+	var col_shape := strike_hitbox.get_node_or_null("CollisionShape2D")
 	if col_shape != null:
 		col_shape.disabled = false
 

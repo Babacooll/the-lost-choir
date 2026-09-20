@@ -97,7 +97,7 @@ func test_strike_hitbox_activates_and_deactivates_across_the_active_phase() -> v
 	# Lighter integration check that doesn't depend on overlap detection:
 	# the hitbox's collider is enabled only for the ACTIVE phase.
 	var combat = _player.combat
-	var col_shape: CollisionShape2D = _player.get_node("StrikeHitbox/CollisionShape2D")
+	var col_shape: CollisionShape2D = combat.strike_hitbox.get_node("CollisionShape2D")
 	assert_true(col_shape.disabled, "hitbox collider should start disabled")
 
 	await _press_strike()
@@ -108,6 +108,26 @@ func test_strike_hitbox_activates_and_deactivates_across_the_active_phase() -> v
 	while combat.strike_state == combat.StrikeState.ACTIVE:
 		await get_tree().physics_frame
 	assert_true(col_shape.disabled, "hitbox collider should be disabled again once ACTIVE ends")
+
+
+func test_strike_hits_a_real_stationary_body_end_to_end() -> void:
+	# The real hitbox -> overlap -> damage path, against a real Area2D and a
+	# real body, not the internal helper called with a hand-built list. This
+	# is the path that was silently broken (the hitbox only ever saw the
+	# player's own collider) while the helper-only test still passed.
+	_player.set_physics_process(false)
+	var combat = _player.combat
+
+	await _press_strike()
+	for i in range(40):
+		await get_tree().physics_frame
+		if combat.strike_state == combat.StrikeState.IDLE and i > 5:
+			break
+
+	assert_eq(_target.hits.size(), 1,
+		"a real Strike activation against a real overlapping body must deal exactly one hit")
+	if not _target.hits.is_empty():
+		assert_eq(_target.hits[0], combat.STRIKE_DAMAGE)
 
 
 func test_jump_locked_during_startup_and_active_unlocked_from_recovery() -> void:
