@@ -45,15 +45,17 @@ signal answer_whiffed(press_ms: float)
 
 @onready var player: CharacterBody2D = get_parent()
 
-# The hitbox is created at runtime and added as a SIBLING of the player (not
-# a child of it) — an Area2D parented under the player's CharacterBody2D
-# reliably failed to detect a stationary body it was fully overlapping
-# (confirmed against a from-scratch control Area2D with identical geometry/
-# layer/mask that worked correctly outside that parentage), while only ever
-# reporting the player's own touching collider. Root cause not fully
-# isolated; decoupling the hitbox from the CharacterBody2D's node hierarchy
-# is the fix that actually restores detection.
-var strike_hitbox: Area2D
+# Strike's hitbox is a direct PhysicsServer2D shape query each active tick,
+# not an Area2D. An Area2D (tried both as a child of the player's
+# CharacterBody2D and as a runtime-created sibling) reliably failed to
+# report a stationary body it was fully, geometrically overlapping —
+# confirmed against a from-scratch control Area2D with identical geometry/
+# layer/mask that worked correctly in the same scene — while only ever
+# reporting the player's own touching collider. Root cause not isolated to
+# a specific Area2D setting; a stateless shape query sidesteps whatever
+# enter/exit-tracking assumption was being violated.
+var _strike_hitbox_shape := RectangleShape2D.new()
+var _strike_hitbox_position: Vector2 = Vector2.ZERO
 
 var strike_state: int = StrikeState.IDLE
 var _strike_timer_ms: float = 0.0
@@ -77,23 +79,7 @@ var last_answer_result: String = ""  # "success" | "whiff" | ""
 
 
 func _ready() -> void:
-	strike_hitbox = Area2D.new()
-	strike_hitbox.name = "StrikeHitbox"
-	strike_hitbox.monitorable = false
-	strike_hitbox.monitoring = false
-	var col_shape := CollisionShape2D.new()
-	col_shape.name = "CollisionShape2D"
-	var rect := RectangleShape2D.new()
-	rect.size = Vector2(STRIKE_REACH_PX, STRIKE_HITBOX_HEIGHT_PX)
-	col_shape.shape = rect
-	col_shape.disabled = true
-	strike_hitbox.add_child(col_shape)
-	player.get_parent().add_child(strike_hitbox)
-
-
-func _exit_tree() -> void:
-	if is_instance_valid(strike_hitbox):
-		strike_hitbox.queue_free()
+	_strike_hitbox_shape.size = Vector2(STRIKE_REACH_PX, STRIKE_HITBOX_HEIGHT_PX)
 
 
 func register_tell_emitter(emitter: TellEmitter) -> void:
@@ -162,8 +148,6 @@ func _set_strike_state(state: int) -> void:
 
 func _open_strike_hitbox() -> void:
 	_struck_bodies.clear()
-	if strike_hitbox == null:
-		return
 	var facing: float = player.facing if "facing" in player else 1.0
 	var collider_half_width: float = 9.0
 	if player.has_node("CollisionShape2D"):
@@ -174,37 +158,33 @@ func _open_strike_hitbox() -> void:
 	var reach_center := collider_half_width + STRIKE_REACH_PX * 0.5
 	# Vertical center matches the player collider's own vertical center
 	# (CollisionShape2D sits at local y = -20 for the 40 px-tall collider).
-	# Positioned in global space since the hitbox is a sibling of the player,
-	# not a child — see the strike_hitbox declaration for why.
-	strike_hitbox.global_position = player.global_position + Vector2(facing * reach_center, -20.0)
-	strike_hitbox.monitoring = true
-	var col_shape := strike_hitbox.get_node_or_null("CollisionShape2D")
-	if col_shape != null:
-		col_shape.disabled = false
+	_strike_hitbox_position = player.global_position + Vector2(facing * reach_center, -20.0)
 
 
 func _close_strike_hitbox() -> void:
-	if strike_hitbox != null:
-		var col_shape := strike_hitbox.get_node_or_null("CollisionShape2D")
-		if col_shape != null:
-			col_shape.disabled = true
-		strike_hitbox.monitoring = false
+	pass  # Nothing to tear down — the hitbox is a query, not a live node.
 
 
 func _apply_strike_hits() -> void:
-	if strike_hitbox == null:
-		return
-	_apply_hits_to_bodies(strike_hitbox.get_overlapping_bodies())
+	var space_state := player.get_world_2d().direct_space_state
+	var query := PhysicsShapeQueryParameters2D.new()
+	query.shape = _strike_hitbox_shape
+	query.transform = Transform2D(0.0, _strike_hitbox_position)
+	query.collide_with_bodies = true
+	query.collide_with_areas = false
+	query.exclude = [player.get_rid()]
+	var bodies: Array = []
+	for result in space_state.intersect_shape(query, 32):
+		bodies.append(result.collider)
+	_apply_hits_to_bodies(bodies)
 
 
 ## Split out from _apply_strike_hits() so the dedupe/damage logic is testable
-## without depending on Area2D's overlap detection actually firing inside a
-## given test run — that's environment-sensitive in ways this logic isn't.
+## with a hand-built body list, independent of the physics query.
 func _apply_hits_to_bodies(bodies: Array) -> void:
 	for body in bodies:
-		# The hitbox starts flush against the player's own collider edge, so
-		# collision margins can report it as touching/overlapping — never a
-		# real hit.
+		# The query already excludes the player's own RID; this is just a
+		# defensive backstop against ever re-hitting it.
 		if body == player or body in _struck_bodies:
 			continue
 		_struck_bodies.append(body)

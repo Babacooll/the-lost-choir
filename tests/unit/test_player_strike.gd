@@ -93,28 +93,27 @@ func test_strike_hit_application_dedupes_and_applies_damage_once() -> void:
 	assert_eq(_target.hits[0], combat.STRIKE_DAMAGE)
 
 
-func test_strike_hitbox_activates_and_deactivates_across_the_active_phase() -> void:
-	# Lighter integration check that doesn't depend on overlap detection:
-	# the hitbox's collider is enabled only for the ACTIVE phase.
+func test_strike_hitbox_positioned_only_once_active_starts() -> void:
+	# Lighter integration check that doesn't depend on the physics query
+	# itself: the hitbox query position is (re)computed only once Strike
+	# reaches ACTIVE, matching the player's position/facing at that moment.
 	var combat = _player.combat
-	var col_shape: CollisionShape2D = combat.strike_hitbox.get_node("CollisionShape2D")
-	assert_true(col_shape.disabled, "hitbox collider should start disabled")
+	var idle_position: Vector2 = combat._strike_hitbox_position
 
 	await _press_strike()
 	while combat.strike_state != combat.StrikeState.ACTIVE:
 		await get_tree().physics_frame
-	assert_false(col_shape.disabled, "hitbox collider should be enabled during ACTIVE")
 
-	while combat.strike_state == combat.StrikeState.ACTIVE:
-		await get_tree().physics_frame
-	assert_true(col_shape.disabled, "hitbox collider should be disabled again once ACTIVE ends")
+	assert_almost_eq(combat._strike_hitbox_position.x, 20.0, 0.5,
+		"hitbox should be positioned 22 px forward of the 18 px-wide collider's edge, facing right")
 
 
 func test_strike_hits_a_real_stationary_body_end_to_end() -> void:
-	# The real hitbox -> overlap -> damage path, against a real Area2D and a
-	# real body, not the internal helper called with a hand-built list. This
-	# is the path that was silently broken (the hitbox only ever saw the
-	# player's own collider) while the helper-only test still passed.
+	# The real hitbox -> physics query -> damage path, against a real body
+	# placed in the world, not the internal helper called with a hand-built
+	# list. This is the path that was silently broken (the query/hitbox
+	# only ever saw the player's own collider) while the helper-only test
+	# still passed.
 	_player.set_physics_process(false)
 	var combat = _player.combat
 
