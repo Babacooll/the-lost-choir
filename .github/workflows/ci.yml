@@ -18,7 +18,14 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Import project
-        run: godot --headless --verbose --path . --import --quit
+        # Run twice: a fresh checkout has no cached .import sidecars, and a
+        # single pass registers new import types (e.g. .wav) without fully
+        # resolving scripts that preload() them yet — surfaces as spurious
+        # "has no resource loaders" SCRIPT ERRORs on autoloads that preload
+        # audio. The second pass is a no-op once everything's cached.
+        run: |
+          godot --headless --verbose --path . --import --quit
+          godot --headless --verbose --path . --import --quit
 
       - name: Run GUT test suite
         run: |
@@ -37,7 +44,14 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Import project
-        run: godot --headless --verbose --path . --import --quit
+        # Run twice: a fresh checkout has no cached .import sidecars, and a
+        # single pass registers new import types (e.g. .wav) without fully
+        # resolving scripts that preload() them yet — surfaces as spurious
+        # "has no resource loaders" SCRIPT ERRORs on autoloads that preload
+        # audio. The second pass is a no-op once everything's cached.
+        run: |
+          godot --headless --verbose --path . --import --quit
+          godot --headless --verbose --path . --import --quit
 
       - name: Install export templates
         run: |
@@ -60,7 +74,7 @@ jobs:
         run: |
           grep -q "the_lost_choir.ldtk" export.log \
             || { echo "::error::assets/levels/the_lost_choir.ldtk was not packed into the export — check export_presets.cfg's include_filter"; exit 1; }
-          strings build/linux/the-lost-choir.pck | grep -q "the_lost_choir.ldtk" \
+          grep -a -q "the_lost_choir.ldtk" build/linux/the-lost-choir.pck \
             || { echo "::error::the_lost_choir.ldtk is not present in the exported .pck"; exit 1; }
 
       - name: Launch the exported build headless and check for runtime errors
@@ -94,7 +108,14 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Import project
-        run: godot --headless --verbose --path . --import --quit
+        # Run twice: a fresh checkout has no cached .import sidecars, and a
+        # single pass registers new import types (e.g. .wav) without fully
+        # resolving scripts that preload() them yet — surfaces as spurious
+        # "has no resource loaders" SCRIPT ERRORs on autoloads that preload
+        # audio. The second pass is a no-op once everything's cached.
+        run: |
+          godot --headless --verbose --path . --import --quit
+          godot --headless --verbose --path . --import --quit
 
       - name: Install export templates
         run: |
