@@ -12,9 +12,13 @@ const TellEmitter = preload("res://scripts/combat/tell_emitter.gd")
 # §5 shared rule 3: repeat compression.
 const COMPRESSION_FACTOR: float = 0.88
 const COMPRESSION_FLOOR_MS: float = 420.0
-# "The counter resets after 6 s with that instance out of combat" — read here
-# as 6 s elapsed since this instance's last tell, since that's the only
-# per-instance clock §5 gives us to measure "out of combat" against.
+# "The counter resets after 6 s with that instance out of combat" — "out of
+# combat" is the aggro relationship, so this is measured against continuous
+# time spent in State.IDLE (entered exactly when the player leaves aggro
+# range), not time since this instance's last tell. Chasing (APPROACH,
+# in reach or not) and post-attack RECOVERY hold the counter regardless of
+# how long it has been since the last tell; only leaving IDLE resets the
+# clock, so re-aggroing before 6 s restarts it rather than resuming it.
 const OUT_OF_COMBAT_RESET_MS: float = 6000.0
 
 const GRAVITY: float = 1800.0
@@ -28,7 +32,7 @@ var facing: float = -1.0
 var _dead: bool = false
 var _recovery_timer_ms: float = 0.0
 var _tell_count: int = 0
-var _ms_since_last_tell: float = INF
+var _ms_disengaged: float = 0.0
 
 var _emitter: TellEmitter
 var player: CharacterBody2D
@@ -92,7 +96,6 @@ func _physics_process(delta: float) -> void:
 		return
 
 	var delta_ms := delta * 1000.0
-	_tick_tell_reset_timer(delta_ms)
 	_apply_gravity(delta)
 
 	match state:
@@ -111,6 +114,7 @@ func _physics_process(delta: float) -> void:
 			if not is_instance_valid(_emitter) or _emitter.stagger_ms <= 0.0:
 				state = State.APPROACH
 
+	_tick_disengage_timer(delta_ms)
 	move_and_slide()
 
 
@@ -156,7 +160,6 @@ func _apply_gravity(delta: float) -> void:
 ## (never from the previous rung, so rounding never compounds), floored.
 func _next_lead_time_ms() -> float:
 	_tell_count += 1
-	_ms_since_last_tell = 0.0
 	var base := base_tell_lead_ms()
 	if _tell_count <= 2:
 		return base
@@ -164,11 +167,18 @@ func _next_lead_time_ms() -> float:
 	return maxf(COMPRESSION_FLOOR_MS, compressed)
 
 
-func _tick_tell_reset_timer(delta_ms: float) -> void:
-	if _ms_since_last_tell >= OUT_OF_COMBAT_RESET_MS:
+## §5 shared rule 3's "out of combat" clock: only continuous time spent in
+## State.IDLE counts. Any other state — chasing but not yet in reach,
+## telling, recovering, staggered — holds the counter regardless of how long
+## it has been since the last tell. Leaving IDLE (re-aggroing) zeroes the
+## clock rather than pausing it, so a partial disengagement never carries
+## over into the next one.
+func _tick_disengage_timer(delta_ms: float) -> void:
+	if state != State.IDLE:
+		_ms_disengaged = 0.0
 		return
-	_ms_since_last_tell += delta_ms
-	if _ms_since_last_tell >= OUT_OF_COMBAT_RESET_MS:
+	_ms_disengaged += delta_ms
+	if _ms_disengaged >= OUT_OF_COMBAT_RESET_MS:
 		_tell_count = 0
 
 
