@@ -15,5 +15,6 @@ shape = SubResource("RectangleShape2D_bell_frame")
 [node name="Visual" type="Polygon2D" parent="."]
 script = ExtResource("2_warmth_visual")
 is_brass = true
+legibility_role = "bell_frame"
 color = Color(0.62, 0.55, 0.3, 1)
-polygon = PackedVector2Array(-24, -6, 24, -6, 24, 6, -24, 6)
+polygon = PackedVector2Array(-24, -6, 24, -6, 24, -2, 20, -2, 20, 2, 12, 2, 12, -2, 4, -2, 4, 5, -4, 5, -4, -2, -12, -2, -12, 8, -20, 8, -20, -2, -24, -2)

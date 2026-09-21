@@ -14,8 +14,18 @@ static var _shared_material: ShaderMaterial
 ## to show the overshoot band as emission (art doc §4.1/§4.2).
 @export var is_brass: bool = false
 
+## Placeholder-legibility role (MICH-613, throwaway — see
+## docs/art/placeholder-legibility.md). Empty means this node isn't covered
+## by that layer and behaves exactly as before (terrain and backdrop keep
+## the derive — doc §7). When set and the layer is enabled, this node drops
+## the ShaderMaterial entirely instead of driving it (doc §3 rule 3).
+@export var legibility_role: String = ""
+
 
 func _ready() -> void:
+	if not legibility_role.is_empty() and PlaceholderLegibility.enabled:
+		PlaceholderLegibility.apply(self, legibility_role)
+		return
 	if _shared_material == null:
 		_shared_material = ShaderMaterial.new()
 		_shared_material.shader = ColdWarmShader
@@ -25,6 +35,8 @@ func _ready() -> void:
 
 
 func _process(_delta: float) -> void:
+	if not legibility_role.is_empty() and PlaceholderLegibility.enabled:
+		return
 	_update_warmth()
 
 

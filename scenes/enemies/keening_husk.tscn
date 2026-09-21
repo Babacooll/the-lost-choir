@@ -1,6 +1,7 @@
-[gd_scene load_steps=3 format=3 uid="uid://dq2m8w5r1p4nz"]
+[gd_scene load_steps=4 format=3 uid="uid://dq2m8w5r1p4nz"]
 
 [ext_resource type="Script" path="res://scripts/enemies/keening_husk.gd" id="1_keening"]
+[ext_resource type="Script" path="res://scripts/art/legibility_role.gd" id="2_legibility"]
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_keening"]
 size = Vector2(16, 36)
@@ -14,5 +15,7 @@ position = Vector2(0, -18)
 shape = SubResource("RectangleShape2D_keening")
 
 [node name="Visual" type="Polygon2D" parent="."]
+script = ExtResource("2_legibility")
 color = Color(0.42, 0.3, 0.5, 1)
-polygon = PackedVector2Array(-8, -36, 8, -36, 8, 0, -8, 0)
+polygon = PackedVector2Array(-9, 0, -3, -48, 3, -48, 9, 0)
+role = "keening_husk"

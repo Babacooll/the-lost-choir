@@ -9,8 +9,9 @@ script = ExtResource("1_verse_bearer")
 [node name="Visual" type="Polygon2D" parent="."]
 script = ExtResource("2_warmth_visual")
 is_brass = true
+legibility_role = "verse_bearer"
 color = Color(0.4, 0.4, 0.45, 1)
-polygon = PackedVector2Array(-10, -36, 10, -36, 10, 0, -10, 0)
+polygon = PackedVector2Array(-20, 0, -20, -18, -16, -18, -8, -38, 8, -38, 16, -18, 20, -18, 20, 0, 15, 0, 15, -18, -15, -18, -15, 0)
 
 [node name="NarrativeLayer" type="CanvasLayer" parent="."]
 layer = 5
