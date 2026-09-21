@@ -137,10 +137,15 @@ is a defeat. "Answer it anyway" is the playable form of *choosing to sing it aga
    `Label` nodes rather than one, so a single label isn't forced to fade one line out while fading
    the next in on the same node. "Only one line ever meaningfully legible (rendered alpha ≥ 0.30) at
    a time" is enforced directly, not left to the two fades' timing: while the outgoing label's alpha
-   is above 0.30, the incoming label's *displayed* alpha is capped at 0.30. Releasing the cap does
-   not snap the incoming straight to wherever its own fade-in timer has reached underneath the cap —
-   that would show as a one-frame pop — it resumes ramping from the capped value at the normal
-   200 ms-equivalent rate instead, so it always arrives as a fade, just possibly a later one.
+   is above 0.30, the incoming label's *displayed* alpha is held at 0. (An earlier pass capped it at
+   0.30 instead — the threshold's own value — which either let a legible ghost of the incoming show
+   through the outgoing's hold, or legalized an outgoing-just-above/incoming-at-threshold frame that
+   was itself unreadable; 0.30 was written as a violation threshold, not a safe value to render a
+   held line at. Holding at 0 makes both cases unreachable and introduces no blank interval, since
+   the outgoing stays fully legible for the whole hold.) Releasing the cap does not snap the incoming
+   straight to wherever its own fade-in timer has reached underneath the hold — that would show as a
+   flash — it resumes ramping from 0 at the normal 200 ms rate instead, which is rule 4's own "fades
+   in over 200 ms," just deferred until the outgoing is out of the way.
 
    The release *cadence* — which gap-opening event shows the next line — is counted, not
    time-gated: every second gap-opening event (a resolved note or a miss, rule 3 makes a miss a gap

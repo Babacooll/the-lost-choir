@@ -36,11 +36,19 @@ const LINE_FADE_MS: float = 300.0
 const LINE_RELEASE_GATE_MS: float = LINE_FADE_IN_MS + LINE_MIN_HOLD_MS
 const MAX_NARRATIVE_LINES: int = 4
 
-## §3.2 rule 4's mutual-exclusion threshold: a label at or above this alpha
-## counts as "meaningfully legible." Engineering Lead's ruling (this issue,
-## Scope 3 remediation) enforces "only one line legible at a time" directly
-## against this threshold rather than deriving it from the two labels'
-## independent fade timings — see _tick_narrative.
+## §3.2 rule 4's mutual-exclusion VIOLATION threshold: a label at or above
+## this alpha counts as "meaningfully legible," so two labels both above it
+## at once is the defect the contract forbids. This is a threshold to test
+## against, not a safe value to hold a line AT — the capped incoming in
+## _tick_narrative is held at 0, not at this number (Game Designer's
+## correction, Scope 3 remediation cycle 3: pinning a held line exactly at
+## this threshold either shows through the outgoing's hold as a legible
+## ghost, or produces an outgoing-just-above/incoming-at-threshold frame
+## that is itself unreadable while still passing a naive "isn't the other
+## one above it too" check). Engineering Lead's ruling (this issue, Scope 3
+## remediation) enforces "only one line legible at a time" directly against
+## this threshold rather than deriving it from the two labels' independent
+## fade timings — see _tick_narrative.
 const LEGIBILITY_THRESHOLD: float = 0.30
 
 const REGISTER_NAME := "verse_bearer"
@@ -121,14 +129,17 @@ var _slot_index: Array = [-1, -1]
 ## The actual rendered alpha per slot — distinct from each slot's RAW
 ## elapsed-time-based alpha once the mutual-exclusion cap is in play. A
 ## capped incoming's raw alpha keeps climbing (or plateaus at 1.0) while its
-## displayed value sits pinned at LEGIBILITY_THRESHOLD; releasing the cap
-## would otherwise jump straight to that far-ahead raw value in one frame,
-## which reads as a flash rather than a fade (Game Designer's refinement,
-## Scope 3 remediation cycle 3). _tick_narrative chases this toward its
-## (possibly capped) target at the same rate as a normal 200 ms fade-in,
-## which is a no-op whenever nothing is capped — an uncapped slot's own raw
-## ramp already moves at exactly that rate — and only actually slows things
-## down right after a cap releases.
+## displayed value is held at 0 — not at LEGIBILITY_THRESHOLD, which was
+## written as a violation threshold, not a safe cap target, and pinning a
+## held line there either shows through the outgoing's hold as a legible
+## ghost or legalizes the exact near-threshold overlap the contract exists
+## to forbid (Game Designer's correction, Scope 3 remediation cycle 3).
+## Releasing the cap would otherwise jump straight from 0 to the far-ahead
+## raw value in one frame, which reads as a flash rather than a fade, so
+## _tick_narrative chases this toward its (possibly capped) target at the
+## same rate as a normal 200 ms fade-in — a no-op whenever nothing is
+## capped (an uncapped slot's own raw ramp already moves at exactly that
+## rate), and now the normal path for every cap release, not an edge case.
 var _slot_display_alpha: Array = [0.0, 0.0]
 
 @onready var _label: Label = get_node_or_null("NarrativeLayer/Label")
@@ -350,29 +361,40 @@ func _tick_narrative(delta_ms: float) -> void:
 	# (Engineering Lead's ruling, Scope 3 remediation — see LEGIBILITY_
 	# THRESHOLD and the comment on _slot_visible for why the margin alone
 	# wasn't robust to answer-timing jitter). The incoming (the most
-	# recently shown slot) has its displayed TARGET capped at the threshold
-	# for as long as the outgoing (the other slot) is still above it. The
-	# incoming's own _slot_elapsed_ms keeps accumulating throughout — only
-	# the target is held back, not the timer — so once the cap lifts, its
-	# target may be far ahead of where the display currently sits.
+	# recently shown slot) is held at 0 — not at LEGIBILITY_THRESHOLD — for
+	# as long as the outgoing (the other slot) is still above the threshold.
+	# Game Designer's correction: 0.30 was written as a violation threshold
+	# ("below this a line isn't meaningfully legible"), not a safe value to
+	# render a held line AT — pinning the incoming at exactly 0.30 either
+	# prints a legible ghost of the next line through the outgoing's full
+	# 1800 ms hold, or, once the strict-above-on-both-sides violation check
+	# was tightened, legalizes outgoing=0.31/incoming=0.30 as a "compliant"
+	# frame that is in fact unreadable — the very defect this contract
+	# exists to forbid. Holding at 0 makes both cases unreachable by
+	# construction, and never introduces a blank interval: the outgoing is
+	# fully legible for the entire hold, so the screen always has exactly
+	# one readable line on it. The incoming's own _slot_elapsed_ms keeps
+	# accumulating throughout — only the displayed value is held, not the
+	# timer — so once the cap lifts, its target may be far ahead of where
+	# the display currently sits (its raw alpha can already be at 1.0).
 	var incoming_slot := _active_label_index
 	var outgoing_slot := 1 - _active_label_index
 	var target_alpha: Array = raw_alpha.duplicate()
 	if raw_alpha[outgoing_slot] > LEGIBILITY_THRESHOLD:
-		target_alpha[incoming_slot] = minf(raw_alpha[incoming_slot], LEGIBILITY_THRESHOLD)
+		target_alpha[incoming_slot] = 0.0
 
 	# Pass 3: chase the (possibly capped) target at the same rate as a
 	# normal 200 ms fade-in, rather than snapping the displayed value
-	# straight to it. With the counted cadence (Scope 3 remediation cycle 3)
-	# a release can land well before the outgoing's own floor, so the cap
-	# can now hold the incoming back for far longer than cycle 2 saw — long
-	# enough that its raw alpha has already reached 1.0 underneath the cap.
-	# Releasing straight to that value would jump the display by more than
-	# the threshold in a single frame, which reads as a flash, not a fade
-	# (Game Designer's refinement). This is a no-op whenever nothing is
-	# capped: an uncapped slot's own raw alpha already changes by exactly
-	# this much each frame, so "chase at this rate" and "snap to the raw
-	# value" produce the same number.
+	# straight to it. Releasing a hold-at-0 cap jumps the incoming's target
+	# by the full 0-to-1.0 range every time (not just "sometimes, if the
+	# hold ran long" as when the cap sat at LEGIBILITY_THRESHOLD) — so this
+	# ramp is no longer optional polish, it fires on every release. Ramping
+	# from 0 at the normal 200 ms rate is rule 4's own "fades in over
+	# 200 ms," just deferred until the outgoing is out of the way, rather
+	# than a compromise. This remains a no-op whenever nothing is capped:
+	# an uncapped slot's own raw alpha already changes by exactly this much
+	# each frame, so "chase at this rate" and "snap to the raw value"
+	# produce the same number.
 	var max_step: float = delta_ms / LINE_FADE_IN_MS
 	for slot in [0, 1]:
 		if not was_visible[slot] or hidden_index[slot] >= 0:

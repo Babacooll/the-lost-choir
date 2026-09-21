@@ -310,10 +310,11 @@ func test_only_one_line_is_ever_meaningfully_legible_at_a_time() -> void:
 	# Drive a full clean run — all three line-to-line swaps (lines 1-4) —
 	# sampling both labels' rendered opacity every physics frame throughout,
 	# and record every frame where both cross the 0.30 legibility threshold
-	# at once. The contract ("if either is >=0.30 the other must be <=0.30")
-	# permits one label sitting exactly at 0.30 while the other exceeds it —
-	# that's the mechanism's own clamp target — so a violation is BOTH
-	# strictly above 0.30, not BOTH at-or-above it.
+	# at once. A violation is BOTH strictly above 0.30 (not BOTH at-or-above
+	# it) purely to absorb the real_t round-trip margin on the mechanism's
+	# own held-at-0 value — see LEGIBILITY_VIOLATION_MARGIN — not because
+	# sitting at exactly 0.30 is an accepted state; the dedicated test below
+	# pins that the held value is actually 0, not the threshold.
 	var violations := []
 	var ticks := 0
 	while encounter.narrative_lines_delivered() < 4 and ticks < 700:
@@ -331,6 +332,68 @@ func test_only_one_line_is_ever_meaningfully_legible_at_a_time() -> void:
 		"all four lines should have released by now on a clean run of continuous answers")
 	assert_eq(violations.size(), 0,
 		"both labels were >= 0.30 alpha at the same frame — two lines legible at once: %s" % [violations])
+
+
+## Game Designer's correction on top of the cap (Scope 3 remediation): the
+## incoming is held at exactly 0 while the outgoing is above threshold, not
+## at LEGIBILITY_THRESHOLD — 0.30 was written as a violation threshold, not
+## a safe value to render a held line at, and pinning it there either shows
+## through the outgoing's hold as a legible ghost, or (once the violation
+## check is strict-above-on-both-sides) legalizes an outgoing-just-above /
+## incoming-at-threshold frame that is itself unreadable. Pin this as its
+## own assertion, not just inferred from the mutual-exclusion test above, so
+## a future refactor back to a minf(raw, LEGIBILITY_THRESHOLD)-style cap is
+## caught directly rather than only showing up as a narrowly-missed
+## violation count.
+func test_incoming_is_held_at_zero_not_at_the_threshold_while_capped() -> void:
+	await _retire_shared_encounter()
+	var encounter = VerseBearerScene.instantiate()
+	add_child(encounter)
+	encounter.global_position = Vector2(100, 20)
+	encounter.set_player(_player)
+	await get_tree().physics_frame
+	await get_tree().physics_frame
+
+	var label_b = encounter.get("_label_b")
+	assert_not_null(encounter._label, "the scene-instantiated bearer must resolve a real NarrativeLayer/Label")
+	assert_not_null(label_b, "the scene-instantiated bearer must resolve a second crossfade label")
+	if encounter._label == null or label_b == null:
+		return  # nothing further to check without both labels to observe
+
+	# On the pure zero-jitter path the cap never actually engages (the
+	# outgoing's own floor-triggered clear already drops it below threshold
+	# before the incoming appears — the nominal-path case cycle 2 analyzed).
+	# A ~250 ms delay on the first answer (the same jitter magnitude the
+	# mutual-exclusion sweep test above uses to reproduce a real hold) is
+	# what makes the cap load-bearing here.
+	await _wait_for_answer_idle()
+	await _wait_until(func(): return encounter._emitter.is_open())
+	for i in range(15):  # ~250 ms
+		await get_tree().physics_frame
+	await _press_answer()
+
+	var observed_capped_frame := false
+	var ticks := 0
+	while encounter.narrative_lines_delivered() < 4 and ticks < 700:
+		var alpha_slot0: float = _visible_alpha(encounter._label)
+		var alpha_slot1: float = _visible_alpha(label_b)
+		var incoming_alpha: float = alpha_slot0 if encounter._active_label_index == 0 else alpha_slot1
+		var outgoing_alpha: float = alpha_slot1 if encounter._active_label_index == 0 else alpha_slot0
+		if outgoing_alpha > LEGIBILITY_VIOLATION_MARGIN:
+			observed_capped_frame = true
+			assert_eq(incoming_alpha, 0.0,
+				"the incoming label must be held at exactly 0 while the outgoing is above the legibility threshold, not at LEGIBILITY_THRESHOLD")
+		if encounter._emitter.is_open():
+			await _press_answer()
+		else:
+			await get_tree().physics_frame
+		ticks += 1
+
+	assert_true(observed_capped_frame,
+		"this test needs at least one frame where the cap was actually engaged to be a meaningful check")
+
+	encounter.queue_free()
+	await get_tree().physics_frame
 
 
 ## Engineering Lead's remediation ruling (this issue, Scope 3): the original
