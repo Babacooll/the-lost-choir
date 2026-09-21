@@ -131,6 +131,36 @@ is a defeat. "Answer it anyway" is the playable form of *choosing to sing it aga
    this display can block, gate, pause or extend a note — the phrase's timing in §7 of the design
    spec is untouched, and the text is a passive layer over it.
    *Decided by the Creative Director on 2026-09-20; no longer open.*
+
+   **Implementation note (Engineering, 2026-09-21):** the clear is built as a two-label crossfade —
+   the outgoing line's 300 ms fade-out and the incoming line's 200 ms fade-in run on two separate
+   `Label` nodes rather than one, so a single label isn't forced to fade one line out while fading
+   the next in on the same node. "Only one line ever meaningfully legible (rendered alpha ≥ 0.30) at
+   a time" is enforced directly, not left to the two fades' timing: while the outgoing label's alpha
+   is above 0.30, the incoming label's *displayed* alpha is held at 0. (An earlier pass capped it at
+   0.30 instead — the threshold's own value — which either let a legible ghost of the incoming show
+   through the outgoing's hold, or legalized an outgoing-just-above/incoming-at-threshold frame that
+   was itself unreadable; 0.30 was written as a violation threshold, not a safe value to render a
+   held line at. Holding at 0 makes both cases unreachable and introduces no blank interval, since
+   the outgoing stays fully legible for the whole hold.) Releasing the cap does not snap the incoming
+   straight to wherever its own fade-in timer has reached underneath the hold — that would show as a
+   flash — it resumes ramping from 0 at the normal 200 ms rate instead, which is rule 4's own "fades
+   in over 200 ms," just deferred until the outgoing is out of the way.
+
+   The release *cadence* — which gap-opening event shows the next line — is counted, not
+   time-gated: every second gap-opening event (a resolved note or a miss, rule 3 makes a miss a gap
+   too) releases the next line, so line 1 releases on the 1st event, line 2 on the 3rd, line 3 on
+   the 5th, line 4 on the 7th. This is what makes rule 5's mapping exact and unconditional — it no
+   longer depends on reaction time at all. Rule 2's "one line per gap" is therefore a maximum rate,
+   not the actual cadence; the real cadence is every *second* gap. An earlier version derived both
+   the mutual-exclusion property and the release cadence from timing alone — the outgoing starting
+   its clear at its own 1800 ms floor instead of waiting for the incoming's release, and a line
+   releasing once 2000 ms had elapsed since the previous one — which both hold on a zero-jitter
+   input but were found not to survive ordinary answer-timing variation (the counted cadence is
+   only safe because the alpha cap already exists: a counted release can land earlier than 2000 ms
+   on the outgoing without cutting its hold short, since the outgoing's own floor and fade-out run
+   on its own clock regardless of when a successor is told to show). This is a build note, not a
+   change to the rule above.
 5. **Once the lines are spent, the encounter is wordless.** On a clean run this is deliberate and
    load-bearing: attempt 1 (3 notes) carries lines 1–2, attempt 2 (4 notes) carries lines 3–4, and
    the final 5-note phrase — the one that actually restores the Verse — has **no text at all**. The
