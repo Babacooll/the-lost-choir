@@ -185,33 +185,115 @@ func test_completing_attempts_extends_the_phrase_then_restores_on_5() -> void:
 	assert_eq(_encounter.state, _encounter.State.RESTORED)
 
 
-func test_narrative_line_holds_at_least_1800ms() -> void:
-	await _wait_until(func(): return _encounter._emitter.is_open())
+## A label's alpha only counts while it's actually on screen — Label.hide()
+## leaves modulate.a untouched, so a hard cut (old label hidden at alpha 1.0,
+## new label just shown at alpha 0.0) would read as "1.0" on either label
+## alone and hide the very defect these tests exist to catch.
+func _visible_alpha(label: Label) -> float:
+	return label.modulate.a if label.visible else 0.0
+
+
+## §3.2 rule 4: full legibility is a minimum of 1800 ms measured from the end
+## of the 200 ms fade-in — a 2000 ms floor from the line's onset — not the
+## 1800-ms-from-onset window the pre-fix implementation held it for. Asserts
+## the actual rendered opacity throughout, not just elapsed time.
+func test_narrative_line_holds_full_legibility_for_1800ms_after_fade_in() -> void:
+	# The shared _encounter from before_each is a bare RestorationEncounterScript.new()
+	# (a plain Node2D) with no NarrativeLayer/Label child, so its _label is null and
+	# any assertion on _label would silently no-op the whole test body. This test
+	# needs the real label, so it instantiates the actual scene instead.
+	var encounter = VerseBearerScene.instantiate()
+	add_child_autofree(encounter)
+	encounter.global_position = Vector2(100, 20)
+	encounter.set_player(_player)
+	await get_tree().physics_frame
+	await get_tree().physics_frame
+
+	assert_not_null(encounter._label, "the scene-instantiated bearer must resolve a real NarrativeLayer/Label")
+	if encounter._label == null:
+		return  # nothing further to check without a label to observe
+
+	await _wait_until(func(): return encounter._emitter.is_open())
 	await _press_answer()
-	await _wait_until(func(): return _encounter.narrative_lines_delivered() >= 1, 120)
-	assert_true(_encounter._line_visible, "the first line should show at the first gap")
+	await _wait_until(func(): return encounter.narrative_lines_delivered() >= 1, 120)
+	assert_true(encounter._line_visible, "the first line should show at the first gap")
 
-	# Keep answering every note that opens while the hold plays out, so no
-	# missed note's silence gap coincidentally lands on (and races) the
-	# 1800 ms hold boundary this test is asserting against — notes are
-	# spaced close enough to it (1100 ms) that an unanswered one would.
+	await _wait_until(func(): return encounter._label.modulate.a >= 1.0, 30)
+
+	# Keep answering every note that opens so a release attempt (a gap) keeps
+	# firing roughly every 1100 ms — close enough to the 2000 ms gate that an
+	# early gate would show up here as a premature swap to line 2.
+	var min_alpha_after_fade_in := 2.0
 	var ticks := 0
-	while ticks < 85:  # ~1.4 s — still short of the 1800 ms hold
-		if _encounter._emitter.is_open():
+	while encounter._line_elapsed_ms < 1900.0 and ticks < 200:
+		min_alpha_after_fade_in = minf(min_alpha_after_fade_in, _visible_alpha(encounter._label))
+		if encounter._emitter.is_open():
 			await _press_answer()
 		else:
 			await get_tree().physics_frame
 		ticks += 1
-	assert_true(_encounter._line_visible, "a line must not hide before its 1800 ms minimum hold elapses")
 
-	ticks = 0
-	while _encounter._line_visible and ticks < 60:
-		if _encounter._emitter.is_open():
+	assert_eq(encounter.narrative_lines_delivered(), 1,
+		"line 1 must still be the only line delivered just short of its 1800 ms full-legibility floor")
+	assert_true(encounter._line_visible, "line 1 must not hide before its full-legibility floor elapses")
+	assert_eq(min_alpha_after_fade_in, 1.0,
+		"line 1 must stay at full, on-screen opacity throughout its legibility floor, not just elapse in time")
+
+
+## §3.2 rule 4: a line clears over 300 ms when the next line begins, while the
+## incoming line fades in over its own 200 ms — a true crossfade, so combined
+## on-screen opacity across the two labels never drops toward 0 between two
+## consecutive lines on a clean run, unlike the pre-fix ~400 ms blank gap or a
+## same-frame hard cut (which this also catches, since a hidden label's alpha
+## does not count per _visible_alpha).
+func test_no_blank_interval_between_consecutive_narrative_lines() -> void:
+	var encounter = VerseBearerScene.instantiate()
+	add_child_autofree(encounter)
+	encounter.global_position = Vector2(100, 20)
+	encounter.set_player(_player)
+	await get_tree().physics_frame
+	await get_tree().physics_frame
+
+	assert_not_null(encounter._label, "the scene-instantiated bearer must resolve a real NarrativeLayer/Label")
+	assert_not_null(encounter._label_b, "the scene-instantiated bearer must resolve a second crossfade label")
+	if encounter._label == null or encounter._label_b == null:
+		return  # nothing further to check without both labels to observe
+
+	await _wait_until(func(): return encounter._emitter.is_open())
+	await _press_answer()
+	await _wait_until(func(): return encounter.narrative_lines_delivered() >= 1, 120)
+	assert_true(encounter._line_visible, "the first line should show at the first gap")
+
+	# Line 1's own 200 ms fade-in from 0 is expected and not the property
+	# under test — start tracking only once it has reached full opacity, so
+	# the measurement window covers just the swap to line 2.
+	await _wait_until(func(): return encounter._label.modulate.a >= 1.0, 30)
+
+	# Stopping as soon as narrative_lines_delivered() reaches 2 would miss the
+	# very frame the swap lands on — that flag flips synchronously inside the
+	# same release call that starts the crossfade, so an alpha dip a hard cut
+	# would produce only becomes observable on the *next* sample, one frame
+	# later. Keep sampling for a further 20 ticks (well past the 300 ms /
+	# ~18-frame fade-out) once the swap is seen, so the whole crossfade
+	# window is actually covered.
+	var min_combined_alpha := 2.0
+	var ticks := 0
+	var post_swap_ticks := 0
+	while post_swap_ticks < 20 and ticks < 260:
+		var combined := _visible_alpha(encounter._label) + _visible_alpha(encounter._label_b)
+		min_combined_alpha = minf(min_combined_alpha, combined)
+		if encounter.narrative_lines_delivered() >= 2:
+			post_swap_ticks += 1
+		if encounter._emitter.is_open():
 			await _press_answer()
 		else:
 			await get_tree().physics_frame
 		ticks += 1
-	assert_false(_encounter._line_visible, "a line must hide once its 1800 ms minimum hold (plus fade) elapses")
+
+	assert_eq(encounter.narrative_lines_delivered(), 2,
+		"line 2 should have released by now on a clean run of continuous answers")
+	assert_gt(min_combined_alpha, 0.95,
+		"combined on-screen opacity across the two labels must stay effectively continuous across the swap")
 
 
 func test_narrative_lines_match_the_approved_restoration_narrative() -> void:
