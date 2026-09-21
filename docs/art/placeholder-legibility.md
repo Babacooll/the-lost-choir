@@ -124,7 +124,7 @@ what the direction rules out cannot be inherited by accident.
 | **S1** | Pairwise bounding-box aspect ratios differ by ≥ 1.25× | all six classes |
 | **S2** | Pairwise fill ratios (silhouette area ÷ bbox area) differ by ≥ 0.12 | the four actor classes |
 | **S3** | The two husks are exempt from S2 and must *share* a fill ratio — same primitive, different proportions | Reed + Keening |
-| **S4** | The player is the only asymmetric class on screen | player |
+| **S4** | The player is the only asymmetric **actor** class | the four actors |
 | **S5** | All classes flattened to solid black on white must be tellable apart by a human | the contact sheet |
 
 **Doors are exempt from S0.** A door is architecture; it is rectangular because it is an
@@ -134,6 +134,13 @@ structurally.
 **Collision shapes are frozen.** Every polygon here is visual only. Hitboxes, reach and the
 420 ms compression floor are approved tuning. A visual that overhangs its collider is
 accepted — it is one more thing that makes the scaffold obviously temporary.
+
+**S4's scope is the actor classes.** The bell-frame and the membrane are asymmetric too,
+deliberately: art doc §9.1 requires the membrane's sag to be off-centre because "a centred
+circular depression … reads as a hole", and §9.2 specifies tubes of *stepped* length. That
+does not weaken S4, whose job is that the player survives a value-only and a colour-blind
+read against the things it could be confused with — and nothing shares an aspect-ratio band
+with a 64 × 10 horizontal strip. The gate checks this rather than asserting it.
 
 **No attack telegraphy.** Static idle silhouettes only: nothing that changes on wind-up and
 nothing that flashes. H2 and H6 test whether the *audio* tell carries the fight, and that

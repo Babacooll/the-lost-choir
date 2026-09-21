@@ -161,6 +161,12 @@ def poly_bbox(pts):
     return min(xs), min(ys), max(xs) - min(xs), max(ys) - min(ys)
 
 
+def _mirror_symmetric(pts):
+    """True if the rasterised shape mirrors about its bounding box's vertical axis."""
+    W, H, on = _raster(pts, 1)
+    return all((W - 1 - x, y) in on for (x, y) in on)
+
+
 def silhouette_metrics():
     out = {}
     for k, pts in SILHOUETTE.items():
@@ -203,6 +209,23 @@ def silhouette_gate(verbose=True):
                 ok = False
                 if verbose:
                     print("S2 FAIL %s/%s fill separation %.3f < %.2f" % (a, b, d, S2_MIN_FILL_SEP))
+    # S4: exactly one actor class is asymmetric, and it is the player. The two
+    # interactables are asymmetric too, deliberately and by instruction from the
+    # art direction (art doc 9.1 requires the membrane's sag off-centre because a
+    # centred depression reads as a hole; 9.2 specifies tubes of stepped length).
+    # That does not weaken S4, whose job is that the player survives a value-only
+    # and a colour-blind read against the other ACTORS -- nothing shares an
+    # aspect-ratio band with a 64x10 horizontal strip.
+    asym = [k for k in ACTOR_CLASSES if not _mirror_symmetric(SILHOUETTE[k])]
+    if asym != ["player"]:
+        ok = False
+        if verbose:
+            print("S4 FAIL asymmetric actor classes are %s, expected exactly ['player']" % asym)
+    elif verbose:
+        others = [k for k in SILHOUETTE if k not in ACTOR_CLASSES
+                  and not _mirror_symmetric(SILHOUETTE[k])]
+        print("S4 player is the only asymmetric actor; asymmetric interactables "
+              "(art-directed): %s" % (others or "none"))
     for k in SILHOUETTE:
         if m[k]["fill"] > S0_MAX_FILL:
             ok = False
