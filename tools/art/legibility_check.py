@@ -11,6 +11,10 @@ What it checks, per gameplay element, in the COLD state:
   G2  the element clears 3.0:1 against the room backdrop
   G3  the element's own two values clear 3.0:1 against each other
   G4  elements that must be told apart are told apart
+  S0  no actor or interactable is an axis-aligned rectangle (doors exempt)
+  S1  pairwise bbox aspect ratios differ by >= 1.25x
+  S2  pairwise silhouette fill ratios differ by >= 0.12 (actor classes)
+  S3  the two husks SHARE a fill ratio -- same primitive, different proportions
 
 An element here is a two-value construction -- a fill plus a contour -- not a flat fill.
 G1/G2 are satisfied when EITHER value clears the floor, which is what makes the element's
@@ -24,6 +28,8 @@ of band. No flat fill of any colour can do it -- see `python3 tools/art/legibili
     python3 tools/art/legibility_check.py --why      # print the flat-fill impossibility bound
     python3 tools/art/legibility_check.py --table    # print the ratio table only
     python3 tools/art/legibility_check.py --frame shot.png [more.png ...]   # grade real pixels
+    python3 tools/art/legibility_check.py --silhouette          # S0-S3 only
+    python3 tools/art/legibility_check.py --contact-sheet o.png # S5 black-on-white sheet
 
 The table gate grades the TABLE. That is not the same thing as grading the screen, and
 the difference is not academic: the table gate passed on a build whose gated door was
@@ -91,6 +97,189 @@ MUST_DIFFER = [
 ]
 DIFFER_MIN_RATIO = 1.5   # value separation between the two fills
 DIFFER_MIN_HUE = 40.0    # degrees, or achromatic-vs-chromatic
+
+# --- the silhouette contract (criteria 6-8) -----------------------------------
+# Visual polygons in .tscn units: origin at the element's own anchor, y negative
+# is up. COLLISION SHAPES ARE FROZEN -- these are visual-only and a visual that
+# overhangs its collider is accepted here (it is one more thing that makes the
+# scaffold obviously temporary).
+#
+# Deliberately crude angular primitives. The approved direction's silhouette
+# grammar is "rounded and resonant -- bell curves, horn bells, larynx curvature
+# ... never angular"; these are angular on purpose, for the same reason the
+# contour is a forbidden motif on purpose. See doc section 6.
+SILHOUETTE = {
+    # Leaning wrapped column with a one-sided shoulder yoke. The yoke is the
+    # asymmetry (S4) and it sits at shoulder height, not head height: art doc
+    # section 6 makes "no ears" a rejection criterion, and a protrusion at the
+    # crown reads as an ear or a horn before it reads as anything else.
+    "player": [(-9, 0), (-9, -40), (9, -40), (9, -30), (15, -30), (15, -20), (9, -20), (9, 0)],
+    # One primitive, two proportions (S3). Both taper toward the aperture, so
+    # the taper length IS the note length -- art doc section 7.2's "short
+    # aperture = short note = short lead; long aperture = long note = long lead"
+    # stated as a shape. Both keep the chamber low and the base rooted.
+    "reed_husk": [(-16, 0), (-5, -22), (5, -22), (16, 0)],
+    "keening_husk": [(-9, 0), (-3, -48), (3, -48), (9, 0)],
+    # Flared bell mouth carried on two ribs that protrude past the chamber's
+    # widest point, with real negative space beneath the mouth (art doc
+    # section 8's two geometric requirements).
+    "verse_bearer": [(-20, 0), (-20, -18), (-16, -18), (-8, -38), (8, -38), (16, -18),
+                     (20, -18), (20, 0), (15, 0), (15, -18), (-15, -18), (-15, 0)],
+    # Tuned tubes of stepped length hanging mouth-down from a yoke (art doc
+    # section 9.2). Tube gaps are 8 px so a 2 px contour on each side still
+    # leaves 4 px of background visible between them.
+    "bell_frame": [(-24, -6), (24, -6), (24, -2), (20, -2), (20, 2), (12, 2), (12, -2),
+                   (4, -2), (4, 5), (-4, 5), (-4, -2), (-12, -2), (-12, 8), (-20, 8),
+                   (-20, -2), (-24, -2)],
+    # Slack skin with the sag off-centre, never at the middle (art doc 9.1).
+    "membrane": [(-32, -4), (32, -4), (32, 0), (-10, 6), (-32, 0)],
+}
+
+# Doors are exempt from S0: a door is architecture, it is rectangular because it
+# is an opening in a wall, and the two constructions in section 4 already carry
+# its state distinction structurally.
+ACTOR_CLASSES = ["player", "reed_husk", "keening_husk", "verse_bearer"]
+KIN_PAIR = {"reed_husk", "keening_husk"}   # S3: same primitive, must SHARE a fill ratio
+S1_MIN_RATIO_SEP = 1.25   # pairwise bbox aspect-ratio separation
+S2_MIN_FILL_SEP = 0.12    # pairwise silhouette-area / bbox-area separation
+S3_MAX_KIN_FILL_SEP = 0.05  # the kin pair must not separate on fill
+S0_MAX_FILL = 0.98        # above this the silhouette is an axis-aligned rectangle
+
+
+def poly_area(pts):
+    s = 0.0
+    for i in range(len(pts)):
+        x1, y1 = pts[i]
+        x2, y2 = pts[(i + 1) % len(pts)]
+        s += x1 * y2 - x2 * y1
+    return abs(s) / 2.0
+
+
+def poly_bbox(pts):
+    xs = [p[0] for p in pts]
+    ys = [p[1] for p in pts]
+    return min(xs), min(ys), max(xs) - min(xs), max(ys) - min(ys)
+
+
+def silhouette_metrics():
+    out = {}
+    for k, pts in SILHOUETTE.items():
+        _x, _y, w, h = poly_bbox(pts)
+        a = poly_area(pts)
+        out[k] = {"w": w, "h": h, "ratio": w / float(h), "fill": a / float(w * h), "area": a}
+    return out
+
+
+def silhouette_gate(verbose=True):
+    m = silhouette_metrics()
+    ok = True
+    if verbose:
+        print("%-14s %8s %8s %8s %8s" % ("class", "bbox", "ratio", "fill", "verts"))
+        for k in SILHOUETTE:
+            print("%-14s %8s %8.3f %8.3f %8d"
+                  % (k, "%dx%d" % (m[k]["w"], m[k]["h"]), m[k]["ratio"], m[k]["fill"],
+                     len(SILHOUETTE[k])))
+        print()
+
+    names = list(SILHOUETTE)
+    for i in range(len(names)):
+        for j in range(i + 1, len(names)):
+            a, b = names[i], names[j]
+            sep = max(m[a]["ratio"], m[b]["ratio"]) / min(m[a]["ratio"], m[b]["ratio"])
+            if sep < S1_MIN_RATIO_SEP:
+                ok = False
+                if verbose:
+                    print("S1 FAIL %s/%s aspect separation %.2f < %.2f" % (a, b, sep, S1_MIN_RATIO_SEP))
+    for i in range(len(ACTOR_CLASSES)):
+        for j in range(i + 1, len(ACTOR_CLASSES)):
+            a, b = ACTOR_CLASSES[i], ACTOR_CLASSES[j]
+            d = abs(m[a]["fill"] - m[b]["fill"])
+            if {a, b} == KIN_PAIR:
+                if d > S3_MAX_KIN_FILL_SEP:   # S3 is a floor from the other side
+                    ok = False
+                    if verbose:
+                        print("S3 FAIL kin pair separates on fill by %.3f -- they must share it" % d)
+            elif d < S2_MIN_FILL_SEP:
+                ok = False
+                if verbose:
+                    print("S2 FAIL %s/%s fill separation %.3f < %.2f" % (a, b, d, S2_MIN_FILL_SEP))
+    for k in SILHOUETTE:
+        if m[k]["fill"] > S0_MAX_FILL:
+            ok = False
+            if verbose:
+                print("S0 FAIL %s is an axis-aligned rectangle (fill %.3f)" % (k, m[k]["fill"]))
+    if verbose:
+        print("S0 not-a-rectangle / S1 proportion / S2 outline / S3 kinship: %s"
+              % ("PASS" if ok else "FAIL"))
+    return ok
+
+
+def _raster(pts, scale):
+    """Even-odd scanline fill at integer pixel centres. Returns (w, h, set-of-px)."""
+    x0, y0, w, h = poly_bbox(pts)
+    W, H = int(w * scale), int(h * scale)
+    sp = [((px - x0) * scale, (py - y0) * scale) for px, py in pts]
+    on = set()
+    for y in range(H):
+        yc = y + 0.5
+        xs = []
+        for i in range(len(sp)):
+            ax, ay = sp[i]
+            bx, by = sp[(i + 1) % len(sp)]
+            if (ay <= yc < by) or (by <= yc < ay):
+                xs.append(ax + (yc - ay) * (bx - ax) / float(by - ay))
+        xs.sort()
+        for k in range(0, len(xs) - 1, 2):
+            for x in range(max(0, int(xs[k] + 0.5)), min(W, int(xs[k + 1] + 0.5))):
+                on.add((x, y))
+    return W, H, on
+
+
+def _write_png(path, w, h, rows):
+    def chunk(tag, data):
+        c = tag + data
+        return (struct.pack(">I", len(data)) + c
+                + struct.pack(">I", zlib.crc32(c) & 0xFFFFFFFF))
+    raw = b"".join(b"\x00" + bytes(r) for r in rows)
+    with open(path, "wb") as f:
+        f.write(b"\x89PNG\r\n\x1a\n")
+        f.write(chunk(b"IHDR", struct.pack(">IIBBBBB", w, h, 8, 2, 0, 0, 0)))
+        f.write(chunk(b"IDAT", zlib.compress(raw, 9)))
+        f.write(chunk(b"IEND", b""))
+
+
+def contact_sheet(path):
+    """Section 5 of the silhouette contract: every class flattened to solid black
+    on white, no colour and no contour, baseline-aligned. Row 1 is slice scale --
+    the honest test. Row 2 is the same geometry at 4x, because a human cannot
+    judge an 18 px shape on a modern display."""
+    groups = [ACTOR_CLASSES, [k for k in SILHOUETTE if k not in ACTOR_CLASSES]]
+    PAD, GAP = 12, 16
+    bands = []
+    for scale in (1, 4):
+        for grp in groups:
+            rast = [_raster(SILHOUETTE[k], scale) for k in grp]
+            bands.append((rast, max(r[1] for r in rast)))
+    width = PAD * 2 + max(sum(r[0] for r in rast) + GAP * scale * (len(rast) - 1)
+                          for scale, (rast, _bh) in zip((1, 1, 4, 4), bands))
+    height = PAD * 2 + sum(bh for _r, bh in bands) + GAP * (len(bands) - 1)
+    rows = [bytearray([255] * (width * 3)) for _ in range(height)]
+
+    y = PAD
+    for scale, (rast, bh) in zip((1, 1, 4, 4), bands):
+        x = PAD
+        for W, H, on in rast:
+            base = y + bh - H          # baseline-align
+            for (px, py) in on:
+                i = ((base + py) * width + x + px) * 3
+                rows[base + py][(x + px) * 3:(x + px) * 3 + 3] = b"\x00\x00\x00"
+            x += W + GAP * scale
+        y += bh + GAP
+    _write_png(path, width, height, rows)
+    order = " | ".join(groups[0]) + "   then   " + " | ".join(groups[1])
+    print("wrote %s (%dx%d) -- rows: 1x actors, 1x interactables, 4x actors, 4x interactables"
+          % (path, width, height))
+    print("left to right: %s" % order)
 
 
 def h2rgb(h):
@@ -296,6 +485,15 @@ def main(argv):
         why()
         return 0
 
+    if "--contact-sheet" in argv:
+        i = argv.index("--contact-sheet")
+        out = argv[i + 1] if len(argv) > i + 1 else "contact_sheet.png"
+        contact_sheet(out)
+        return 0
+
+    if "--silhouette" in argv:
+        return 0 if silhouette_gate() else 1
+
     if "--frame" in argv:
         paths = argv[argv.index("--frame") + 1:]
         if not paths:
@@ -344,6 +542,9 @@ def main(argv):
 
     if table_only:
         return 0
+    print()
+    print("-- silhouette contract (criteria 6-8) --")
+    ok &= silhouette_gate()
     print()
     print("G1 element vs terrain solid  >= %.1f:1   G2 element vs backdrop >= %.1f:1" % (FLOOR, FLOOR))
     print("G3 fill vs its own contour   >= %.1f:1   G4 mutually distinguishable" % FLOOR)

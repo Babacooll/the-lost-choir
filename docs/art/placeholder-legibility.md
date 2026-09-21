@@ -99,6 +99,125 @@ Rules, all of them non-negotiable for the layer to pass its gate:
 
 Lowest margin in the table is 3.84:1 — 28% clear of the floor, not 2.9.
 
+## 4b. The silhouette contract — criteria 6–8
+
+Added 2026-09-21 by amendment. Contrast made the slice *visible*; it did not make it
+*identifiable*. Every actor was the same axis-aligned rectangle within 4 px of width and
+8 px of height, so four bright sticks still told a player nothing about which one they
+were or which were dangerous. Numbered `4b` rather than inserted as a new §5 because the
+section numbers in this document are referenced from code comments in
+`scripts/art/placeholder_legibility.gd`, `scripts/art/warmth_visual.gd` and
+`scripts/levels/door.gd`, and renumbering would silently falsify all of them.
+
+Same fencing as the contour, for the same reason: **throwaway, deleted with the layer,
+establishes nothing.** The shapes below are deliberately crude angular primitives. The
+approved direction's silhouette grammar is "rounded and resonant — bell curves, horn
+bells, larynx curvature — never angular, segmented, chitinous"; these are angular *on
+purpose*, exactly as the contour is a forbidden motif on purpose. A scaffold built from
+what the direction rules out cannot be inherited by accident.
+
+### The rules
+
+| | rule | applies to |
+|---|---|---|
+| **S0** | No actor or interactable is an axis-aligned rectangle. Terrain and backdrop keep theirs. | all six classes |
+| **S1** | Pairwise bounding-box aspect ratios differ by ≥ 1.25× | all six classes |
+| **S2** | Pairwise fill ratios (silhouette area ÷ bbox area) differ by ≥ 0.12 | the four actor classes |
+| **S3** | The two husks are exempt from S2 and must *share* a fill ratio — same primitive, different proportions | Reed + Keening |
+| **S4** | The player is the only asymmetric class on screen | player |
+| **S5** | All classes flattened to solid black on white must be tellable apart by a human | the contact sheet |
+
+**Doors are exempt from S0.** A door is architecture; it is rectangular because it is an
+opening in a wall, and §4's two constructions already carry its state distinction
+structurally.
+
+**Collision shapes are frozen.** Every polygon here is visual only. Hitboxes, reach and the
+420 ms compression floor are approved tuning. A visual that overhangs its collider is
+accepted — it is one more thing that makes the scaffold obviously temporary.
+
+**No attack telegraphy.** Static idle silhouettes only: nothing that changes on wind-up and
+nothing that flashes. H2 and H6 test whether the *audio* tell carries the fight, and that
+hypothesis is falsified by a good visual wind-up more easily than by anything else.
+
+### The shapes
+
+Visual polygons in `.tscn` units, origin at the element's own anchor, y negative is up.
+
+| class | bbox | ratio | fill | the read |
+|---|---|---:|---:|---|
+| Player (the Listener) | 24 × 40 | 0.600 | 0.812 | upright wrapped column with a one-sided shoulder yoke — the only asymmetric thing on screen |
+| Reed Husk | 32 × 22 | 1.455 | 0.656 | squat wedge, wide rooted base, short taper |
+| Keening Husk | 18 × 48 | 0.375 | 0.667 | the same wedge drawn long — narrow, rooted, a long taper |
+| Verse-bearer | 40 × 38 | 1.053 | 0.434 | flared mouth carried on two ribs, with real negative space beneath |
+| Bell-frame | 48 × 14 | 3.429 | 0.536 | tuned tubes of stepped length hanging mouth-down from a yoke |
+| Membrane | 64 × 10 | 6.400 | 0.700 | slack skin, sag off-centre |
+
+```
+player        (-9,0) (-9,-40) (9,-40) (9,-30) (15,-30) (15,-20) (9,-20) (9,0)
+reed_husk     (-16,0) (-5,-22) (5,-22) (16,0)
+keening_husk  (-9,0) (-3,-48) (3,-48) (9,0)
+verse_bearer  (-20,0) (-20,-18) (-16,-18) (-8,-38) (8,-38) (16,-18) (20,-18) (20,0)
+              (15,0) (15,-18) (-15,-18) (-15,0)
+bell_frame    (-24,-6) (24,-6) (24,-2) (20,-2) (20,2) (12,2) (12,-2) (4,-2) (4,5)
+              (-4,5) (-4,-2) (-12,-2) (-12,8) (-20,8) (-20,-2) (-24,-2)
+membrane      (-32,-4) (32,-4) (32,0) (-10,6) (-32,0)
+```
+
+### Why these shapes and not others
+
+**The husk pair is one primitive at two proportions, and both taper toward the aperture.**
+Art doc §7.2's rule is "short aperture = short note = short lead; long aperture = long note
+= long lead" — so the taper length *is* the note length, and the silhouette teaches the same
+rule the audio does. Both keep the chamber low and the base rooted, per §7.2's "rooted:
+frame members fuse into a base that meets the floor as one mass". They separate on S1 alone
+(3.88×) and share a fill ratio to within 0.010, which is S3's both-halves: visibly kin
+*because* the primitive is identical, separately recognisable *because* the proportion is not.
+
+**The player's asymmetry is a shoulder yoke, not a head protrusion.** Art doc §6 makes "no
+ears" an explicit rejection criterion at the critic gate, and a protrusion at the crown reads
+as an ear or a horn before it reads as anything else. The yoke sits at shoulder height, is
+equipment rather than anatomy, and §6 already names "frame = the shoulder yoke" as part of
+the Listener's approved three-mass read. It spends no identity.
+
+**The Verse-bearer's ribs protrude past the chamber and the mouth stands clear of the
+ground.** Those are art doc §8's two stated geometric requirements, and the negative space
+beneath the mouth is what makes the third mass legible in black fill. The scaffold carries
+the mass distribution and the gap; it does not attempt §8's rib-versus-chamber separation,
+which is a 64 × 72 finished-art requirement a 40 px blockout cannot hold.
+
+**The bell-frame's tube gaps are 8 px wide.** At 4 px they would close: a 2 px contour on
+each side of a gap consumes it entirely and the comb renders as a solid bar with black
+stripes. 8 px leaves 4 px of background visible between tubes.
+
+**The membrane's sag is off-centre.** Art doc §9.1: "off-centre and asymmetric — deepest
+point ~⅓ across, never at the middle", because a centred depression reads as a hole.
+
+### The contour mechanism has to change
+
+`PlaceholderLegibility._expand()` offsets each vertex away from the centroid, per axis. Its
+own comment says that is exact "for axis-aligned rectangles" and "not a general
+polygon-offset for arbitrary shapes" — which was true and is now a defect, because none of
+these shapes is a rectangle. On a sloped edge it produces a contour thinner than 2 px
+perpendicular; at a concave vertex it offsets in the wrong direction entirely.
+
+Replace it with a **closed `Line2D` of width `2 × CONTOUR_WIDTH` centred on the silhouette
+outline**, `show_behind_parent = true`, sharp joints, anti-aliasing off. Exactly half the
+stroke lies outside the fill and the fill covers the inner half, so the visible contour is
+2 px on any polygon, convex or concave, with no offset maths to get wrong. Doors keep the
+same mechanism — one construction for everything.
+
+### The gate
+
+```
+python3 tools/art/legibility_check.py --silhouette           # S0–S3
+python3 tools/art/legibility_check.py --contact-sheet o.png  # S5, black on white
+```
+
+S0–S3 are the cheap numeric proxy. **S5 — the contact sheet — is the actual gate**, and a
+human looks at it. The sheet renders every class as solid black on white with no colour and
+no contour, at slice scale and at 4×, because nobody can judge an 18 px shape on a modern
+display.
+
 ### 5. Identity
 
 The player is the only achromatic element and the brightest thing on screen. The two
@@ -189,9 +308,11 @@ This layer is done when `assets/art/` has real sprites. Deleting it is:
 
 1. remove the placeholder script and every `role` declaration that feeds it;
 2. remove `tools/art/legibility_check.py`;
-3. remove this file;
-4. restore the original fills and alphas listed in §1;
-5. confirm `tools/art/warmth_check.py` still passes.
+3. remove this file, and the contact sheet if one was committed;
+4. restore the original fills and alphas listed in §1, and the original rectangular
+   visual polygons the actors had before §4b;
+5. restore `Door._refresh_visual()`'s gated dim by deleting its early return;
+6. confirm `tools/art/warmth_check.py` still passes.
 
 If step 4 is ever hard to perform because production drifted onto these colours, the
 layer outlived its licence and that is the bug.
