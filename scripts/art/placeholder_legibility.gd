@@ -53,8 +53,11 @@ func apply(polygon: Polygon2D, role: String) -> void:
 	contour.name = "PlaceholderContour"
 	contour.polygon = _expand(polygon.polygon, CONTOUR_WIDTH)
 	contour.color = contour_color(role)
-	contour.z_as_relative = true
-	contour.z_index = -1
+	# Behind the fill by tree order, not by sinking to a lower z (doc §3 rule
+	# 6) — a lower z falls below the terrain solids at z 0 and gets painted
+	# over wherever the element overlaps terrain, which is exactly where the
+	# contour is the only value clearing the floor.
+	contour.show_behind_parent = true
 	polygon.add_child(contour)
 
 
