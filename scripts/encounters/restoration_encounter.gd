@@ -26,10 +26,12 @@ const SHORTEN_TO_1_AFTER_FAILURES: int = 4
 const LINE_MIN_HOLD_MS: float = 1800.0
 const LINE_FADE_IN_MS: float = 200.0
 const LINE_FADE_MS: float = 300.0
-## Elapsed time since a line's onset at which it becomes eligible to be
-## cleared by the next line's release. Reaching this mark does not clear the
-## line by itself — it only opens the gate; the line still holds until the
-## next line's release actually happens (§3.2 rule 4's "whichever is later").
+## Elapsed time since a line's onset at which its own 1800 ms floor of full
+## legibility is reached. Two things happen at this mark: it becomes the
+## earliest a successor may show (§3.2 rule 4's "whichever is later"), AND
+## the line begins clearing itself over its own 300 ms fade-out regardless of
+## whether a successor has actually shown yet — Scope 3's fix for two lines
+## never being simultaneously legible (see _slot_visible's comment).
 const LINE_RELEASE_GATE_MS: float = LINE_FADE_IN_MS + LINE_MIN_HOLD_MS
 const MAX_NARRATIVE_LINES: int = 4
 
@@ -65,28 +67,38 @@ var _silence_elapsed_ms: float = 0.0
 
 var _narrative_index: int = 0
 var _line_visible: bool = false
-var _line_elapsed_ms: float = 0.0
-## True when the currently visible line is the last one that will ever be
-## shown (no successor can arrive to release it) — only then does it fade
-## itself out once its own legibility floor is reached (§3.2 rule 4's
-## degenerate case: no "next line begins" event will ever come).
-var _line_is_final: bool = false
 var _current_line_text: String = ""
 
-## Which of the two labels (0 = _label, 1 = _label_b) currently holds the
-## line tracked by _line_visible / _line_elapsed_ms. The two labels ping-pong
-## on every non-final release so an outgoing line's 300 ms fade-out can run
-## on one label while the incoming line's 200 ms fade-in runs on the other —
-## a genuine overlap, not a sequential hide-then-show (§3.2 rule 4).
+## Which of the two labels (0 = _label, 1 = _label_b) most recently received
+## a line — the two ping-pong on every show, one slot ahead. _line_visible /
+## current_line_text() report on this slot, since it's always the most
+## recent line, but every slot ticks its own clear independently (see
+## _slot_visible etc. below) regardless of which one is "active."
 var _active_label_index: int = 0
 
-## The line clearing on the label _not_ currently active, mid its own
-## independent 300 ms fade-out timer. Only ever set on a "next line begins"
-## release — the final line's self-clear still runs through _line_elapsed_ms
-## on the single active label, untouched by this.
-var _outgoing_active: bool = false
-var _outgoing_elapsed_ms: float = 0.0
-var _outgoing_index: int = -1
+## Per-label narrative state, indexed the same way as _active_label_index.
+## Each slot fades in over its own 200 ms, holds at full opacity until its
+## own 1800 ms-of-legibility floor (2000 ms elapsed), then clears itself
+## over 300 ms — unconditionally, whether or not a successor has shown yet.
+##
+## §3.2 rule 4 sanctions text overlapping a *note*, not text overlapping
+## text ("a line is never interrupted by the next one") — Game Designer's
+## ruling on the R6 playtest render (this issue) found the original
+## implementation's overlap violated that: the outgoing line only started
+## clearing once the incoming one released, so for ~200 ms both labels sat
+## between roughly alpha 0.3-0.8 at once, superimposing two readable-ish
+## sentences with no aligned words. Starting each line's own clear at its
+## own floor — decoupled from when (or whether) a successor actually
+## releases — means the outgoing is already well below the incoming's rise
+## by the time the incoming label crosses legibility (see _maybe_release_
+## narrative_line's gate for the timing margin this relies on). If a
+## release is delayed by real jitter past a line's own floor+300ms, that
+## line finishes clearing before its successor shows — a brief blank
+## screen, which the ruling accepts as the lesser defect versus ever
+## showing two lines at once.
+var _slot_visible: Array = [false, false]
+var _slot_elapsed_ms: Array = [0.0, 0.0]
+var _slot_index: Array = [-1, -1]
 
 @onready var _label: Label = get_node_or_null("NarrativeLayer/Label")
 @onready var _label_b: Label = get_node_or_null("NarrativeLayer/LabelB")
@@ -217,30 +229,36 @@ func _restore() -> void:
 
 # --- Narrative delivery (§7 narrative delivery section, §11 AC#14) ---------
 
+## The gate a line's own floor opens (§3.2 rule 4: 1800 ms of full legibility
+## measured from the end of its 200 ms fade-in) still governs the earliest a
+## successor may show — unchanged from Scope 1. What changed in Scope 3 is
+## only when the OUTGOING line starts visually clearing: see _tick_narrative,
+## which starts that the moment the outgoing's own floor is reached, not
+## when this function next runs. On the shipped gap schedule (§7's 1100 ms
+## note spacing) a release lands ~200 ms after the floor opens, which is the
+## margin that keeps the outgoing under alpha 0.3 by the time the incoming
+## crosses it — see the mutual-exclusion test for the measured margin.
 func _maybe_release_narrative_line() -> void:
 	if _narrative_index >= MAX_NARRATIVE_LINES or _narrative_index >= NARRATIVE_LINES.size():
 		return
-	if _line_visible and _line_elapsed_ms < LINE_RELEASE_GATE_MS:
+	var active_slot_visible: bool = _slot_visible[_active_label_index]
+	var active_slot_elapsed: float = _slot_elapsed_ms[_active_label_index]
+	if active_slot_visible and active_slot_elapsed < LINE_RELEASE_GATE_MS:
 		return  # the current line hasn't held its full 1800 ms of legibility yet
-	if _line_visible:
-		# The next line begins now: the outgoing line starts its own 300 ms
-		# fade-out on its label while the incoming line fades in on the other
-		# one, overlapping — a true crossfade, not a hide-then-show, so there
-		# is no blank frame between them (§3.2 rule 4).
-		_outgoing_active = true
-		_outgoing_elapsed_ms = 0.0
-		_outgoing_index = _narrative_index - 1
+	if active_slot_visible:
 		_active_label_index = 1 - _active_label_index
 	_show_line(_narrative_index)
 	_narrative_index += 1
 
 
 func _show_line(index: int) -> void:
+	var slot := _active_label_index
+	_slot_visible[slot] = true
+	_slot_elapsed_ms[slot] = 0.0
+	_slot_index[slot] = index
 	_line_visible = true
-	_line_elapsed_ms = 0.0
-	_line_is_final = index + 1 >= MAX_NARRATIVE_LINES or index + 1 >= NARRATIVE_LINES.size()
 	_current_line_text = NARRATIVE_LINES[index]
-	var label := _label_for(_active_label_index)
+	var label := _label_for(slot)
 	if label != null:
 		label.text = _current_line_text
 		label.modulate.a = 0.0
@@ -248,53 +266,35 @@ func _show_line(index: int) -> void:
 	line_shown.emit(index, _current_line_text)
 
 
-## Only the final line's self-clear (no successor to release it) still goes
-## through this — a "next line begins" release clears the outgoing line via
-## the independent _outgoing_* fade in _tick_narrative instead.
-func _hide_current_line() -> void:
-	var index := _narrative_index - 1
-	_line_visible = false
-	var label := _label_for(_active_label_index)
-	if label != null:
-		label.hide()
-	line_hidden.emit(index)
-
-
 func _tick_narrative(delta_ms: float) -> void:
-	if _outgoing_active:
-		_outgoing_elapsed_ms += delta_ms
-		var outgoing_label := _label_for(1 - _active_label_index)
-		if _outgoing_elapsed_ms >= LINE_FADE_MS:
-			_outgoing_active = false
-			if outgoing_label != null:
-				outgoing_label.hide()
-			line_hidden.emit(_outgoing_index)
-		elif outgoing_label != null:
-			outgoing_label.modulate.a = 1.0 - clampf(_outgoing_elapsed_ms / LINE_FADE_MS, 0.0, 1.0)
-
-	if not _line_visible:
-		return
-	_line_elapsed_ms += delta_ms
-	var label := _label_for(_active_label_index)
-	if _line_elapsed_ms < LINE_FADE_IN_MS:
+	for slot in [0, 1]:
+		if not _slot_visible[slot]:
+			continue
+		_slot_elapsed_ms[slot] += delta_ms
+		var elapsed: float = _slot_elapsed_ms[slot]
+		var label := _label_for(slot)
+		if elapsed < LINE_FADE_IN_MS:
+			if label != null:
+				label.modulate.a = clampf(elapsed / LINE_FADE_IN_MS, 0.0, 1.0)
+			continue
+		if elapsed < LINE_RELEASE_GATE_MS:
+			if label != null:
+				label.modulate.a = 1.0
+			continue
+		# Past its own 1800 ms floor: this slot clears itself over 300 ms
+		# regardless of whether a successor has shown yet (Scope 3 — see the
+		# comment on _slot_visible for why the clear can't wait on that).
+		var fade_elapsed: float = elapsed - LINE_RELEASE_GATE_MS
+		if fade_elapsed >= LINE_FADE_MS:
+			_slot_visible[slot] = false
+			if label != null:
+				label.hide()
+			line_hidden.emit(_slot_index[slot])
+			if slot == _active_label_index:
+				_line_visible = false
+			continue
 		if label != null:
-			label.modulate.a = clampf(_line_elapsed_ms / LINE_FADE_IN_MS, 0.0, 1.0)
-		return
-	if not _line_is_final or _line_elapsed_ms < LINE_RELEASE_GATE_MS:
-		# Fully legible and waiting: either still inside its 1800 ms floor, or
-		# past it but holding for a successor that hasn't released yet — a
-		# line is a passive layer and never times itself out on a note clock.
-		if label != null:
-			label.modulate.a = 1.0
-		return
-	# The last line has no successor to release it, so once its own floor is
-	# reached it fades itself out (§3.2 rule 4's degenerate case).
-	var fade_elapsed_ms := _line_elapsed_ms - LINE_RELEASE_GATE_MS
-	if fade_elapsed_ms >= LINE_FADE_MS:
-		_hide_current_line()
-		return
-	if label != null:
-		label.modulate.a = 1.0 - clampf(fade_elapsed_ms / LINE_FADE_MS, 0.0, 1.0)
+			label.modulate.a = 1.0 - clampf(fade_elapsed / LINE_FADE_MS, 0.0, 1.0)
 
 
 func current_line_text() -> String:

@@ -225,7 +225,7 @@ func test_narrative_line_holds_full_legibility_for_1800ms_after_fade_in() -> voi
 	# early gate would show up here as a premature swap to line 2.
 	var min_alpha_after_fade_in := 2.0
 	var ticks := 0
-	while encounter._line_elapsed_ms < 1900.0 and ticks < 200:
+	while encounter._slot_elapsed_ms[encounter._active_label_index] < 1900.0 and ticks < 200:
 		min_alpha_after_fade_in = minf(min_alpha_after_fade_in, _visible_alpha(encounter._label))
 		if encounter._emitter.is_open():
 			await _press_answer()
@@ -240,13 +240,19 @@ func test_narrative_line_holds_full_legibility_for_1800ms_after_fade_in() -> voi
 		"line 1 must stay at full, on-screen opacity throughout its legibility floor, not just elapse in time")
 
 
-## §3.2 rule 4: a line clears over 300 ms when the next line begins, while the
-## incoming line fades in over its own 200 ms — a true crossfade, so combined
-## on-screen opacity across the two labels never drops toward 0 between two
-## consecutive lines on a clean run, unlike the pre-fix ~400 ms blank gap or a
-## same-frame hard cut (which this also catches, since a hidden label's alpha
-## does not count per _visible_alpha).
-func test_no_blank_interval_between_consecutive_narrative_lines() -> void:
+## §3.2 rule 4, Scope 3 (Game Designer's phasing ruling on this issue): the
+## overlap rule 4 sanctions is text over a *note*, not text over text — "a
+## line is never interrupted by the next one." The original two-label
+## crossfade started the outgoing label's clear only when the incoming one
+## released, which left both labels between roughly alpha 0.3-0.8 at once
+## for ~200 ms of every swap: two superimposed, near-unreadable sentences.
+## The fix decouples the outgoing's clear from the incoming's release (see
+## _slot_visible's comment in the script) so only one line is ever
+## meaningfully legible. This supersedes Scope 1's "combined alpha stays
+## near 1.0 across the swap" property — per the ruling's stated priority,
+## legibility wins over "no blank interval" at the handoff frame itself, so
+## a moment where both labels read near 0 is now expected, not a defect.
+func test_only_one_line_is_ever_meaningfully_legible_at_a_time() -> void:
 	var encounter = VerseBearerScene.instantiate()
 	add_child_autofree(encounter)
 	encounter.global_position = Vector2(100, 20)
@@ -265,41 +271,27 @@ func test_no_blank_interval_between_consecutive_narrative_lines() -> void:
 	if encounter._label == null or label_b == null:
 		return  # nothing further to check without both labels to observe
 
-	await _wait_until(func(): return encounter._emitter.is_open())
-	await _press_answer()
-	await _wait_until(func(): return encounter.narrative_lines_delivered() >= 1, 120)
-	assert_true(encounter._line_visible, "the first line should show at the first gap")
-
-	# Line 1's own 200 ms fade-in from 0 is expected and not the property
-	# under test — start tracking only once it has reached full opacity, so
-	# the measurement window covers just the swap to line 2.
-	await _wait_until(func(): return encounter._label.modulate.a >= 1.0, 30)
-
-	# Stopping as soon as narrative_lines_delivered() reaches 2 would miss the
-	# very frame the swap lands on — that flag flips synchronously inside the
-	# same release call that starts the crossfade, so an alpha dip a hard cut
-	# would produce only becomes observable on the *next* sample, one frame
-	# later. Keep sampling for a further 20 ticks (well past the 300 ms /
-	# ~18-frame fade-out) once the swap is seen, so the whole crossfade
-	# window is actually covered.
-	var min_combined_alpha := 2.0
+	# Drive a full clean run — all three line-to-line swaps (lines 1-4) —
+	# sampling both labels' rendered opacity every physics frame throughout,
+	# and record every frame where both cross the 0.30 legibility threshold
+	# at once.
+	var violations := []
 	var ticks := 0
-	var post_swap_ticks := 0
-	while post_swap_ticks < 20 and ticks < 260:
-		var combined := _visible_alpha(encounter._label) + _visible_alpha(label_b)
-		min_combined_alpha = minf(min_combined_alpha, combined)
-		if encounter.narrative_lines_delivered() >= 2:
-			post_swap_ticks += 1
+	while encounter.narrative_lines_delivered() < 4 and ticks < 700:
+		var alpha_a: float = _visible_alpha(encounter._label)
+		var alpha_b: float = _visible_alpha(label_b)
+		if alpha_a >= 0.30 and alpha_b >= 0.30:
+			violations.append("tick %d: label=%.3f label_b=%.3f" % [ticks, alpha_a, alpha_b])
 		if encounter._emitter.is_open():
 			await _press_answer()
 		else:
 			await get_tree().physics_frame
 		ticks += 1
 
-	assert_eq(encounter.narrative_lines_delivered(), 2,
-		"line 2 should have released by now on a clean run of continuous answers")
-	assert_gt(min_combined_alpha, 0.95,
-		"combined on-screen opacity across the two labels must stay effectively continuous across the swap")
+	assert_eq(encounter.narrative_lines_delivered(), 4,
+		"all four lines should have released by now on a clean run of continuous answers")
+	assert_eq(violations.size(), 0,
+		"both labels were >= 0.30 alpha at the same frame — two lines legible at once: %s" % [violations])
 
 
 func test_narrative_lines_match_the_approved_restoration_narrative() -> void:
