@@ -213,6 +213,31 @@ func test_narrative_line_holds_at_least_1800ms() -> void:
 	assert_false(_encounter._line_visible, "a line must hide once its 1800 ms minimum hold (plus fade) elapses")
 
 
+func test_narrative_lines_match_the_approved_restoration_narrative() -> void:
+	assert_eq(_encounter.NARRATIVE_LINES, PackedStringArray([
+		"I was the ground note. Everything above was tuned to me.",
+		"I drifted. Slowly. For years. And they followed me down.",
+		"When I finally heard myself, I could not take it back.",
+		"This is the pitch I have left. Answer it anyway.",
+	]), "docs/narrative/vertical-slice-narrative.md §3.1 is the approved source; the bearer's words must match it verbatim")
+
+
+func test_narrative_line_fades_in_over_200ms_at_gap_onset() -> void:
+	await _wait_until(func(): return _encounter._emitter.is_open())
+	await _press_answer()
+	await _wait_until(func(): return _encounter.narrative_lines_delivered() >= 1, 120)
+	assert_true(_encounter._line_visible, "the first line should show at the first gap")
+	assert_eq(_encounter._label.modulate.a, 0.0, "a line must start fully transparent at gap onset (§3.2.4)")
+
+	await _wait_ticks(6)  # ~100 ms into the 200 ms fade-in
+	var mid_alpha: float = _encounter._label.modulate.a
+	assert_true(mid_alpha > 0.0 and mid_alpha < 1.0,
+		"a line should be partway faded in ~100 ms into its 200 ms fade-in (§3.2.4)")
+
+	await _wait_until(func(): return _encounter._label.modulate.a >= 1.0, 30)
+	assert_eq(_encounter._label.modulate.a, 1.0, "a line must be fully legible once its 200 ms fade-in elapses")
+
+
 func test_narrative_index_persists_across_a_failed_attempt() -> void:
 	await _wait_until(func(): return _encounter._emitter.is_open())
 	await _press_answer()

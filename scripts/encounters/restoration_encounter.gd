@@ -20,20 +20,19 @@ const SHORTEN_TO_2_AFTER_FAILURES: int = 2
 const SHORTEN_TO_1_AFTER_FAILURES: int = 4
 
 const LINE_MIN_HOLD_MS: float = 1800.0
+const LINE_FADE_IN_MS: float = 200.0
 const LINE_FADE_MS: float = 300.0
 const MAX_NARRATIVE_LINES: int = 4
 
 const REGISTER_NAME := "verse_bearer"
 
-## Delivery mechanics (slot, hold time, index persistence, silent gap) are
-## this checkpoint's scope; the words themselves are Narrative's — these are
-## placeholders standing in for a later content pass, each within the ≤12
-## word / 4-line budget §7 sets.
-const PLACEHOLDER_LINES: PackedStringArray = [
-	"It sang until the seam went dark, then simply stopped mid-phrase.",
-	"Not broken. Not asleep. Only unanswered, for longer than it could bear.",
-	"It still remembers the shape of being heard, and is asking again.",
-	"Answer it, and the rest of this room remembers too.",
+## The approved restoration-encounter narrative (docs/narrative/vertical-slice-narrative.md
+## §3.1), each within the ≤12 word / 4-line budget §7 sets.
+const NARRATIVE_LINES: PackedStringArray = [
+	"I was the ground note. Everything above was tuned to me.",
+	"I drifted. Slowly. For years. And they followed me down.",
+	"When I finally heard myself, I could not take it back.",
+	"This is the pitch I have left. Answer it anyway.",
 ]
 
 enum State { OFFERING, SILENCE, RESTORED }
@@ -183,7 +182,7 @@ func _restore() -> void:
 # --- Narrative delivery (§7 narrative delivery section, §11 AC#14) ---------
 
 func _maybe_release_narrative_line() -> void:
-	if _narrative_index >= MAX_NARRATIVE_LINES or _narrative_index >= PLACEHOLDER_LINES.size():
+	if _narrative_index >= MAX_NARRATIVE_LINES or _narrative_index >= NARRATIVE_LINES.size():
 		return
 	if _line_hold_remaining_ms > 0.0:
 		return  # the previous line's minimum hold hasn't expired — try the next gap
@@ -194,10 +193,10 @@ func _maybe_release_narrative_line() -> void:
 func _show_line(index: int) -> void:
 	_line_visible = true
 	_line_hold_remaining_ms = LINE_MIN_HOLD_MS
-	_current_line_text = PLACEHOLDER_LINES[index]
+	_current_line_text = NARRATIVE_LINES[index]
 	if _label != null:
 		_label.text = _current_line_text
-		_label.modulate.a = 1.0
+		_label.modulate.a = 0.0
 		_label.show()
 	line_shown.emit(index, _current_line_text)
 
@@ -206,10 +205,17 @@ func _tick_narrative(delta_ms: float) -> void:
 	if not _line_visible:
 		return
 	_line_hold_remaining_ms -= delta_ms
+	var elapsed_ms := LINE_MIN_HOLD_MS - _line_hold_remaining_ms
 	if _line_hold_remaining_ms <= LINE_FADE_MS:
 		var fade_t := clampf(_line_hold_remaining_ms / LINE_FADE_MS, 0.0, 1.0)
 		if _label != null:
 			_label.modulate.a = fade_t
+	elif elapsed_ms < LINE_FADE_IN_MS:
+		if _label != null:
+			_label.modulate.a = clampf(elapsed_ms / LINE_FADE_IN_MS, 0.0, 1.0)
+	else:
+		if _label != null:
+			_label.modulate.a = 1.0
 	if _line_hold_remaining_ms <= 0.0:
 		_line_visible = false
 		if _label != null:
