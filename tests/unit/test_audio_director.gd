@@ -8,6 +8,10 @@ extends GutTest
 
 const PlayerScene := preload("res://scenes/player.tscn")
 const MembraneScene := preload("res://scenes/world/membrane.tscn")
+const ReedHusk := preload("res://scripts/enemies/reed_husk.gd")
+const KeeningHusk := preload("res://scripts/enemies/keening_husk.gd")
+const RestorationEncounterScript := preload("res://scripts/encounters/restoration_encounter.gd")
+const DummyTellDirector := preload("res://scripts/debug/dummy_tell_director.gd")
 
 
 func before_each() -> void:
@@ -239,3 +243,44 @@ func test_encounter_parameters_update_when_a_note_opens() -> void:
 	AudioDirector.set_encounter_note_index(1)
 	assert_eq(AudioDirector.encounter_phrase_length, 3)
 	assert_eq(AudioDirector.encounter_note_index, 1)
+
+
+## --- 7. Every live call site's register resolves to a stream (MICH-614) ----
+##
+## Pulled from the actual call sites rather than hard-coded, so this fails
+## the moment a new call site's register goes unhandled in play_tell's
+## match — the exact failure mode "dummy" hit before this fix (falls
+## through the match's default branch, no AudioStreamPlayer created, no
+## diagnostic).
+
+func _live_tell_registers() -> Array:
+	var reed := ReedHusk.new()
+	var keening := KeeningHusk.new()
+	var registers := [
+		reed.register_name(),
+		keening.register_name(),
+		RestorationEncounterScript.REGISTER_NAME,
+		DummyTellDirector.TELL_REGISTER,
+	]
+	reed.free()
+	keening.free()
+	return registers
+
+
+## Counts children rather than reusing _find_active_stream_player's
+## "last playing AudioStreamPlayer" search: earlier iterations' players are
+## still mid-playback (real streams run hundreds of ms, far longer than one
+## frame) and remain "playing", so a stale one from a *previous*, handled
+## register would silently satisfy a later, unhandled register's assertion.
+## Requiring a strictly new child catches that a register produced nothing.
+func test_every_live_call_site_register_resolves_to_a_stream() -> void:
+	for register in _live_tell_registers():
+		var before := AudioDirector.get_child_count()
+
+		var emitter := TellEmitter.new()
+		add_child_autofree(emitter)
+		emitter.open_tell(520.0, register)
+		await get_tree().process_frame
+
+		assert_gt(AudioDirector.get_child_count(), before,
+			"register '%s' (used by a live open_tell call site) must resolve to a stream in AudioDirector.play_tell" % register)
