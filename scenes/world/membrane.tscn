@@ -16,5 +16,6 @@ disabled = true
 
 [node name="Visual" type="Polygon2D" parent="."]
 script = ExtResource("2_warmth_visual")
+legibility_role = "membrane"
 color = Color(0.5, 0.3, 0.45, 0.85)
 polygon = PackedVector2Array(-32, -4, 32, -4, 32, 4, -32, 4)

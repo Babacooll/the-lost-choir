@@ -213,12 +213,14 @@ func _build_door(entity: Dictionary) -> void:
 	shape.shape = rect
 	door.add_child(shape)
 
+	var is_gated: bool = not door.requires_flag.is_empty()
 	var visual := Polygon2D.new()
 	visual.polygon = PackedVector2Array([
 		Vector2(0, 0), Vector2(width, 0), Vector2(width, height), Vector2(0, height),
 	])
-	visual.color = GATED_DOOR_COLOR if not door.requires_flag.is_empty() else OPEN_DOOR_COLOR
+	visual.color = GATED_DOOR_COLOR if is_gated else OPEN_DOOR_COLOR
 	door.add_child(visual)
+	PlaceholderLegibility.apply(visual, "door_gated" if is_gated else "door_open")
 	door.set_meta("visual", visual)
 
 	add_child(door)
