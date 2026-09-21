@@ -20,13 +20,27 @@ the only construction that can meet it at all. The terrain solid and the backdro
 of band. No flat fill of any colour can do it -- see `python3 tools/art/legibility_check.py
 --why` for the bound.
 
-    python3 tools/art/legibility_check.py            # run the gate
+    python3 tools/art/legibility_check.py            # run the table gate
     python3 tools/art/legibility_check.py --why      # print the flat-fill impossibility bound
     python3 tools/art/legibility_check.py --table    # print the ratio table only
+    python3 tools/art/legibility_check.py --frame shot.png [more.png ...]   # grade real pixels
+
+The table gate grades the TABLE. That is not the same thing as grading the screen, and
+the difference is not academic: the table gate passed on a build whose gated door was
+being drawn at 55% opacity by `Door._refresh_visual()`, landing it at 1.78:1 against the
+backdrop while this file cheerfully reported 4.07:1. A table gate cannot see a modulate,
+a material, a blend mode or a z-order. --frame can.
+
+--frame asserts the invariant that makes this layer checkable at all: in a placeholder
+scene of flat opaque fills, EVERY pixel is either a ground colour or a colour from the
+table below. Any third colour means something is compositing an element, and the table
+has stopped describing what the player sees.
 
 Exit 0 = pass, 1 = fail.
 """
+import struct
 import sys
+import zlib
 
 # --- the cold-derive, mirrored from shaders/cold_warm.gdshader -----------------
 # Mirrored, never edited here. If the shader's constants ever change, this copy is
@@ -135,6 +149,126 @@ def to_hex(c):
     return "#" + "".join("%02x" % max(0, min(255, round(x * 255))) for x in c)
 
 
+# --- real-pixel grading -------------------------------------------------------
+UNKNOWN_AREA_FAIL = 16   # px; below this an odd colour is reported but not fatal
+GROUND_TOLERANCE = 2     # per-channel, absorbs the shader's float->byte rounding
+
+
+def read_png(path):
+    """Minimal 8-bit non-interlaced RGB/RGBA reader -- what Godot writes, no Pillow."""
+    with open(path, "rb") as f:
+        data = f.read()
+    if data[:8] != b"\x89PNG\r\n\x1a\n":
+        raise ValueError("%s: not a PNG" % path)
+    pos, idat, hdr = 8, [], None
+    while pos < len(data):
+        (length,) = struct.unpack(">I", data[pos:pos + 4])
+        ctype = data[pos + 4:pos + 8]
+        if ctype == b"IHDR":
+            hdr = struct.unpack(">IIBBBBB", data[pos + 8:pos + 8 + length])
+        elif ctype == b"IDAT":
+            idat.append(data[pos + 8:pos + 8 + length])
+        elif ctype == b"IEND":
+            break
+        pos += 12 + length
+    if hdr is None:
+        raise ValueError("%s: no IHDR" % path)
+    w, h, depth, color, _c, _f, interlace = hdr
+    if depth != 8 or interlace != 0 or color not in (2, 6):
+        raise ValueError("%s: need 8-bit non-interlaced RGB or RGBA" % path)
+    n = 3 if color == 2 else 4
+    raw = zlib.decompress(b"".join(idat))
+    stride, out, prev, p = w * n, bytearray(w * n * h), bytearray(w * n), 0
+    for y in range(h):
+        ft = raw[p]
+        p += 1
+        line = bytearray(raw[p:p + stride])
+        p += stride
+        if ft == 1:
+            for i in range(n, stride):
+                line[i] = (line[i] + line[i - n]) & 0xFF
+        elif ft == 2:
+            for i in range(stride):
+                line[i] = (line[i] + prev[i]) & 0xFF
+        elif ft == 3:
+            for i in range(stride):
+                a = line[i - n] if i >= n else 0
+                line[i] = (line[i] + ((a + prev[i]) >> 1)) & 0xFF
+        elif ft == 4:
+            for i in range(stride):
+                a = line[i - n] if i >= n else 0
+                c = prev[i - n] if i >= n else 0
+                b = prev[i]
+                pa, pb, pc = abs(b - c), abs(a - c), abs(a + b - 2 * c)
+                pr = a if (pa <= pb and pa <= pc) else (b if pb <= pc else c)
+                line[i] = (line[i] + pr) & 0xFF
+        elif ft != 0:
+            raise ValueError("%s: bad PNG filter %d" % (path, ft))
+        out[y * stride:(y + 1) * stride] = line
+        prev = line
+    return w, h, n, bytes(out)
+
+
+def _near(a, b):
+    return all(abs(a[i] - b[i]) <= GROUND_TOLERANCE for i in range(3))
+
+
+def grade_frame(path):
+    """True if every pixel is a ground colour or a table colour."""
+    w, h, n, px = read_png(path)
+    counts = {}
+    for i in range(0, len(px), n):
+        key = (px[i], px[i + 1], px[i + 2])
+        counts[key] = counts.get(key, 0) + 1
+
+    grounds = []
+    for state, cold in GROUNDS:
+        for role, warm_hex in (("terrain solid", TERRAIN_SOLID_WARM), ("backdrop", BACKDROP_WARM)):
+            c = derive_cold(h2rgb(warm_hex)) if cold else h2rgb(warm_hex)
+            grounds.append(("%s %s" % (state, role), tuple(round(x * 255) for x in c)))
+    # One colour can serve several roles -- the black contour serves seven -- so
+    # collect every owner rather than letting the first entry claim it.
+    table = {}
+    for eid, label, fill_hex, cont_hex in PLACEHOLDER:
+        for hx, kind in ((fill_hex, "fill"), (cont_hex, "contour")):
+            table.setdefault(tuple(int(hx[i:i + 2], 16) for i in (0, 2, 4)), []).append(
+                "%s %s" % (label, kind))
+
+    cold_solid = derive_cold(h2rgb(TERRAIN_SOLID_WARM))
+    cold_back = derive_cold(h2rgb(BACKDROP_WARM))
+
+    print("%s -- %dx%d, %d distinct colours" % (path, w, h, len(counts)))
+    unknown, ok = [], True
+    for col, cnt in sorted(counts.items(), key=lambda kv: -kv[1]):
+        known_as = None
+        for gname, gcol in grounds:
+            if _near(col, gcol):
+                known_as = gname
+                break
+        if known_as is None:
+            for tcol, owners in table.items():
+                if _near(col, tcol):
+                    known_as = (owners[0] if len(owners) == 1
+                                else "%s (+%d more)" % (owners[0], len(owners) - 1))
+                    break
+        hexs = "#%02x%02x%02x" % col
+        if known_as is None:
+            rgb = tuple(x / 255.0 for x in col)
+            print("   %s %7d px  UNACCOUNTED -- vs cold solid %.2f:1, vs cold backdrop %.2f:1"
+                  % (hexs, cnt, ratio(rgb, cold_solid), ratio(rgb, cold_back)))
+            unknown.append((hexs, cnt))
+            if cnt >= UNKNOWN_AREA_FAIL:
+                ok = False
+        else:
+            print("   %s %7d px  %s" % (hexs, cnt, known_as))
+    if unknown and not ok:
+        print("   -> an unaccounted colour means an element is being composited (modulate,")
+        print("      alpha, blend mode) and the table no longer describes the screen.")
+    print("   frame verdict: %s" % ("PASS" if ok else "FAIL"))
+    print()
+    return ok
+
+
 def why():
     solid = derive_cold(h2rgb(TERRAIN_SOLID_WARM))
     back = derive_cold(h2rgb(BACKDROP_WARM))
@@ -161,6 +295,21 @@ def main(argv):
     if "--why" in argv:
         why()
         return 0
+
+    if "--frame" in argv:
+        paths = argv[argv.index("--frame") + 1:]
+        if not paths:
+            print("error: --frame needs at least one PNG")
+            return 1
+        ok = True
+        for p in paths:
+            try:
+                ok &= grade_frame(p)
+            except (OSError, ValueError) as exc:
+                print("error: %s" % exc)
+                return 1
+        print("rendered-frame gate: %s" % ("PASS" if ok else "FAIL"))
+        return 0 if ok else 1
 
     table_only = "--table" in argv
     rows, ok = {}, True

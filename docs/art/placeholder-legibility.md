@@ -74,6 +74,15 @@ Rules, all of them non-negotiable for the layer to pass its gate:
    warm-on-first-sight (art doc §4.3) and a playtester reaches them.
 4. **Every colour here is deliberately outside `docs/art/palettes/lost-choir-slice.json`.**
    A placeholder colour that could be mistaken for a palette entry is a bug.
+5. **Nothing may composite a covered element while the layer is on.** No `modulate`, no
+   `self_modulate`, no non-opaque alpha, no blend mode. `modulate` inherits down the tree,
+   so a dim applied to a parent washes out the fill *and* the contour together and takes
+   the whole construction with it — see §7's note on `Door._refresh_visual()`, which is
+   exactly this failure and cost a round.
+6. **The contour shares its fill's z-index.** It draws behind the fill by tree order
+   (`show_behind_parent`), not by sinking to a lower z. A contour at `z_index = -1` falls
+   below the terrain solids at z 0, so it is painted over wherever an element overlaps
+   terrain — which is precisely where it is the only value clearing the floor.
 
 ### 4. The table
 
@@ -137,18 +146,38 @@ For whoever builds this — it is engine integration, not asset production.
   fail with the layer on; that is not a regression, it is two different scenes.
 - Elements to cover: player, Reed Husk, Keening Husk, Verse-bearer, bell-frame, membrane,
   gated door, open door. Nothing else. Terrain and backdrop keep the derive.
+- **`Door._refresh_visual()` sets `visual.modulate.a = 0.55` on a gated door.** That dim
+  predates this layer and must survive its deletion, but it cannot apply while the layer
+  is on: it multiplies into both the fill and the contour and drops the gated door to
+  1.78:1 against the backdrop. Suppress it for the layer's lifetime, do not delete it. The
+  gated/open distinction is already carried by the two constructions in §4 — solid block
+  versus dark hole in a bright frame — so nothing is lost by holding the alpha at 1.0.
+- Anything else that later wants to tint, fade or flash a covered element (hit flashes,
+  death fades, gating states) hits the same wall. While the layer is on, those effects
+  have to route around the fill colour or be suppressed.
 
 ### 8. The gate
 
 ```
-python3 tools/art/legibility_check.py          # the gate; exit 0 = pass
-python3 tools/art/legibility_check.py --why    # the flat-fill impossibility bound
+python3 tools/art/legibility_check.py                      # the table gate; exit 0 = pass
+python3 tools/art/legibility_check.py --why                # the flat-fill impossibility bound
+python3 tools/art/legibility_check.py --frame shot.png ... # the rendered-frame gate
 ```
 
-The checker mirrors the shader's cold-derive and re-derives every ratio in §4 from the
-live `room.gd` ground colours, so the table above is checked rather than asserted. It
+The **table gate** mirrors the shader's cold-derive and re-derives every ratio in §4 from
+the live `room.gd` ground colours, so the table above is checked rather than asserted. It
 covers G1 (vs terrain solid), G2 (vs backdrop), G3 (fill vs its own contour) and G4
 (mutual distinguishability), in the cold state and the warm one.
+
+The **rendered-frame gate** grades real pixels, and it exists because the table gate is
+not enough. A table gate cannot see a `modulate`, an alpha, a material or a z-order; the
+first implementation of this layer passed the table gate at a claimed 4.07:1 while the
+gated door was actually on screen at 1.78:1. `--frame` asserts the invariant that makes a
+flat-fill placeholder scene checkable at all: **every pixel is either a ground colour or a
+colour from §4's table.** A third colour means something is compositing an element, and it
+names the colour, its area, and its real ratios. Both gates must pass, and the frame gate
+must be run on a room containing each covered element — a frame that does not contain an
+element says nothing about it.
 
 A passing gate is a floor, not a verdict. The human read — can a playtester who has never
 seen the slice tell the player from a husk, and a gated door from an open one — is a
