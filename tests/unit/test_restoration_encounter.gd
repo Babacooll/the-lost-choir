@@ -10,6 +10,13 @@ const RestorationEncounterScript := preload("res://scripts/encounters/restoratio
 const VerseBearerScene := preload("res://scenes/encounters/verse_bearer.tscn")
 const DoorScript := preload("res://scripts/levels/door.gd")
 
+## Color.a (modulate) is a 32-bit real_t; writing the double literal 0.30
+## into it and reading it back yields ~0.300000012, which is genuinely
+## greater than the 64-bit double literal 0.30 used in a bare comparison —
+## a float32/float64 round-trip artifact, not a real excess over the cap.
+## Anything past this margin is a real violation, not rounding noise.
+const LEGIBILITY_VIOLATION_MARGIN := 0.30 + 0.001
+
 var _player: CharacterBody2D
 var _encounter
 var _input
@@ -274,13 +281,16 @@ func test_only_one_line_is_ever_meaningfully_legible_at_a_time() -> void:
 	# Drive a full clean run — all three line-to-line swaps (lines 1-4) —
 	# sampling both labels' rendered opacity every physics frame throughout,
 	# and record every frame where both cross the 0.30 legibility threshold
-	# at once.
+	# at once. The contract ("if either is >=0.30 the other must be <=0.30")
+	# permits one label sitting exactly at 0.30 while the other exceeds it —
+	# that's the mechanism's own clamp target — so a violation is BOTH
+	# strictly above 0.30, not BOTH at-or-above it.
 	var violations := []
 	var ticks := 0
 	while encounter.narrative_lines_delivered() < 4 and ticks < 700:
 		var alpha_a: float = _visible_alpha(encounter._label)
 		var alpha_b: float = _visible_alpha(label_b)
-		if alpha_a >= 0.30 and alpha_b >= 0.30:
+		if alpha_a > LEGIBILITY_VIOLATION_MARGIN and alpha_b > LEGIBILITY_VIOLATION_MARGIN:
 			violations.append("tick %d: label=%.3f label_b=%.3f" % [ticks, alpha_a, alpha_b])
 		if encounter._emitter.is_open():
 			await _press_answer()
@@ -292,6 +302,77 @@ func test_only_one_line_is_ever_meaningfully_legible_at_a_time() -> void:
 		"all four lines should have released by now on a clean run of continuous answers")
 	assert_eq(violations.size(), 0,
 		"both labels were >= 0.30 alpha at the same frame — two lines legible at once: %s" % [violations])
+
+
+## Engineering Lead's remediation ruling (this issue, Scope 3): the original
+## phasing derived "only one line legible" from the timing margin between
+## the outgoing's floor and the incoming's release, and Engineering Reviewer
+## measured that margin as only ~3 frames on the zero-jitter path — consumed
+## 1:1 by ordinary reaction-time variation on the *first* note of a run
+## (unwarned, cold-start — not a contrived input), reproducing the exact
+## superimposition Game Designer ruled against for delays of roughly
+## 125-215 ms. test_only_one_line_is_ever_meaningfully_legible_at_a_time
+## above only ever drives the single best-case point on that curve (answers
+## the instant a note opens), which is exactly why it missed this. The fix
+## replaces the derived margin with a direct clamp (see LEGIBILITY_THRESHOLD
+## in the script), so the contract must hold at every point on the curve,
+## not just the nominal one — sweep the delay across and past Reviewer's
+## measured violating band.
+func test_only_one_line_legible_across_a_sweep_of_first_note_answer_delays() -> void:
+	var delays_ms: Array = [0.0, 100.0, 133.0, 150.0, 167.0, 200.0, 233.0, 267.0]
+	var all_violations := []
+
+	for delay_ms in delays_ms:
+		var encounter = VerseBearerScene.instantiate()
+		add_child(encounter)
+		encounter.global_position = Vector2(100, 20)
+		encounter.set_player(_player)
+		await get_tree().physics_frame
+		await get_tree().physics_frame
+
+		var label_b = encounter.get("_label_b")
+		if encounter._label == null or label_b == null:
+			all_violations.append("delay=%dms: bearer did not resolve both crossfade labels" % delay_ms)
+			encounter.queue_free()
+			await get_tree().physics_frame
+			continue
+
+		await _wait_until(func(): return encounter._emitter.is_open())
+		# Delay only the run's first answer — every note after it is still
+		# answered the instant its window opens. The delay shifts when the
+		# first release-attempt happens without touching note onset timing
+		# (§7's "the 1100 ms spacing does not move" — unaffected either way).
+		var delay_ticks := int(round(delay_ms / (1000.0 / 60.0)))
+		for i in range(delay_ticks):
+			await get_tree().physics_frame
+		await _press_answer()
+
+		var ticks := 0
+		while encounter.narrative_lines_delivered() < 4 and ticks < 700:
+			var alpha_a: float = _visible_alpha(encounter._label)
+			var alpha_b: float = _visible_alpha(label_b)
+			if alpha_a > LEGIBILITY_VIOLATION_MARGIN and alpha_b > LEGIBILITY_VIOLATION_MARGIN:
+				all_violations.append("delay=%dms tick %d: label=%.3f label_b=%.3f" % [delay_ms, ticks, alpha_a, alpha_b])
+			if encounter._emitter.is_open():
+				await _press_answer()
+			else:
+				await get_tree().physics_frame
+			ticks += 1
+
+		if encounter.narrative_lines_delivered() != 4:
+			all_violations.append("delay=%dms: only %d of 4 lines released" % [delay_ms, encounter.narrative_lines_delivered()])
+
+		# Free explicitly (not add_child_autofree) so the next delay in the
+		# sweep starts with no other encounter's tell still open — several
+		# overlapping VerseBearer instances would let a single Answer press
+		# resolve the wrong one's note via PlayerCombat's cross-tell
+		# arbitration (§5 shared rule 6), corrupting the next iteration's
+		# timing.
+		encounter.queue_free()
+		await get_tree().physics_frame
+
+	assert_eq(all_violations.size(), 0,
+		"both labels were >= 0.30 alpha at the same frame for at least one first-note delay in the sweep: %s" % [all_violations])
 
 
 func test_narrative_lines_match_the_approved_restoration_narrative() -> void:

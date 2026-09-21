@@ -134,12 +134,15 @@ is a defeat. "Answer it anyway" is the playable form of *choosing to sing it aga
 
    **Implementation note (Engineering, 2026-09-21):** the clear is built as a two-label crossfade —
    the outgoing line's 300 ms fade-out and the incoming line's 200 ms fade-in run on two separate
-   `Label` nodes rather than one, phased so only one line is ever meaningfully legible (rendered
-   alpha ≥ 0.30) at a time. The outgoing label starts its own clear at its own 1800 ms floor rather
-   than waiting for the incoming line's release to trigger it — a single label can't fade one line
-   out while fading the next in on the same node, and starting the clear on the release event itself
-   left both labels legible at once for a stretch of the swap. This is a build note, not a change to
-   the rule above.
+   `Label` nodes rather than one, so a single label isn't forced to fade one line out while fading
+   the next in on the same node. "Only one line ever meaningfully legible (rendered alpha ≥ 0.30) at
+   a time" is enforced directly, not left to the two fades' timing: while the outgoing label's alpha
+   is above 0.30, the incoming label's *displayed* alpha is capped at 0.30 (its own fade-in timer
+   keeps running underneath the cap, so it can jump forward once the cap lifts rather than restart).
+   An earlier version derived the same property from timing alone — the outgoing starting its clear
+   at its own 1800 ms floor instead of waiting for the incoming's release — which holds on a
+   zero-jitter input but was found not to survive ordinary answer-timing variation. This is a build
+   note, not a change to the rule above.
 5. **Once the lines are spent, the encounter is wordless.** On a clean run this is deliberate and
    load-bearing: attempt 1 (3 notes) carries lines 1–2, attempt 2 (4 notes) carries lines 3–4, and
    the final 5-note phrase — the one that actually restores the Verse — has **no text at all**. The

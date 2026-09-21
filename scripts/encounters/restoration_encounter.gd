@@ -35,6 +35,13 @@ const LINE_FADE_MS: float = 300.0
 const LINE_RELEASE_GATE_MS: float = LINE_FADE_IN_MS + LINE_MIN_HOLD_MS
 const MAX_NARRATIVE_LINES: int = 4
 
+## §3.2 rule 4's mutual-exclusion threshold: a label at or above this alpha
+## counts as "meaningfully legible." Engineering Lead's ruling (this issue,
+## Scope 3 remediation) enforces "only one line legible at a time" directly
+## against this threshold rather than deriving it from the two labels'
+## independent fade timings — see _tick_narrative.
+const LEGIBILITY_THRESHOLD: float = 0.30
+
 const REGISTER_NAME := "verse_bearer"
 
 ## The approved restoration-encounter narrative (docs/narrative/vertical-slice-narrative.md
@@ -89,11 +96,15 @@ var _active_label_index: int = 0
 ## between roughly alpha 0.3-0.8 at once, superimposing two readable-ish
 ## sentences with no aligned words. Starting each line's own clear at its
 ## own floor — decoupled from when (or whether) a successor actually
-## releases — means the outgoing is already well below the incoming's rise
-## by the time the incoming label crosses legibility (see _maybe_release_
-## narrative_line's gate for the timing margin this relies on). If a
-## release is delayed by real jitter past a line's own floor+300ms, that
-## line finishes clearing before its successor shows — a brief blank
+## releases — is necessary but was found NOT sufficient on its own: Engineering
+## Reviewer measured that the margin this creates is only ~3 frames on the
+## nominal path and is consumed 1:1 by ordinary answer-timing jitter,
+## reproducing the same superimposition under ~125-215 ms of reaction delay
+## on the first note of a run. _tick_narrative therefore enforces the
+## mutual-exclusion contract directly — see LEGIBILITY_THRESHOLD and the
+## incoming/outgoing clamp below — rather than relying on this timing gap.
+## If a release is delayed by real jitter past a line's own floor+300ms,
+## that line finishes clearing before its successor shows — a brief blank
 ## screen, which the ruling accepts as the lesser defect versus ever
 ## showing two lines at once.
 var _slot_visible: Array = [false, false]
@@ -234,10 +245,11 @@ func _restore() -> void:
 ## successor may show — unchanged from Scope 1. What changed in Scope 3 is
 ## only when the OUTGOING line starts visually clearing: see _tick_narrative,
 ## which starts that the moment the outgoing's own floor is reached, not
-## when this function next runs. On the shipped gap schedule (§7's 1100 ms
-## note spacing) a release lands ~200 ms after the floor opens, which is the
-## margin that keeps the outgoing under alpha 0.3 by the time the incoming
-## crosses it — see the mutual-exclusion test for the measured margin.
+## when this function next runs. Whether that head start is enough to keep
+## both labels' rendered alpha from crossing LEGIBILITY_THRESHOLD at once is
+## no longer left to the gap schedule's margin — _tick_narrative clamps the
+## incoming's displayed alpha directly whenever the outgoing is still above
+## threshold, so the mutual-exclusion contract holds regardless of jitter.
 func _maybe_release_narrative_line() -> void:
 	if _narrative_index >= MAX_NARRATIVE_LINES or _narrative_index >= NARRATIVE_LINES.size():
 		return
@@ -267,34 +279,64 @@ func _show_line(index: int) -> void:
 
 
 func _tick_narrative(delta_ms: float) -> void:
+	# Pass 1: advance each visible slot's own elapsed-time timer and compute
+	# its RAW alpha from that timer alone — fade-in, hold, self-clear — with
+	# no awareness of the other slot yet. This is exactly Scope 3's original
+	# per-slot logic, untouched: durations, the 1800 ms floor, and the
+	# self-clear-at-floor behavior all still come from elapsed time only.
+	var was_visible: Array = [_slot_visible[0], _slot_visible[1]]
+	var raw_alpha: Array = [0.0, 0.0]
+	var hidden_index: Array = [-1, -1]
 	for slot in [0, 1]:
-		if not _slot_visible[slot]:
+		if not was_visible[slot]:
 			continue
 		_slot_elapsed_ms[slot] += delta_ms
 		var elapsed: float = _slot_elapsed_ms[slot]
-		var label := _label_for(slot)
 		if elapsed < LINE_FADE_IN_MS:
-			if label != null:
-				label.modulate.a = clampf(elapsed / LINE_FADE_IN_MS, 0.0, 1.0)
+			raw_alpha[slot] = clampf(elapsed / LINE_FADE_IN_MS, 0.0, 1.0)
+		elif elapsed < LINE_RELEASE_GATE_MS:
+			raw_alpha[slot] = 1.0
+		else:
+			# Past its own 1800 ms floor: this slot clears itself over 300 ms
+			# regardless of whether a successor has shown yet (Scope 3 — see
+			# the comment on _slot_visible for why the clear can't wait on
+			# that release).
+			var fade_elapsed: float = elapsed - LINE_RELEASE_GATE_MS
+			if fade_elapsed >= LINE_FADE_MS:
+				_slot_visible[slot] = false
+				hidden_index[slot] = _slot_index[slot]
+				if slot == _active_label_index:
+					_line_visible = false
+			else:
+				raw_alpha[slot] = 1.0 - clampf(fade_elapsed / LINE_FADE_MS, 0.0, 1.0)
+
+	# Pass 2: enforce "only one line meaningfully legible" as a direct clamp
+	# on the RENDERED value, not as a consequence of the two timers' margin
+	# (Engineering Lead's ruling, Scope 3 remediation — see LEGIBILITY_
+	# THRESHOLD and the comment on _slot_visible for why the margin alone
+	# wasn't robust to answer-timing jitter). The incoming (the most
+	# recently shown slot) has its displayed alpha capped at the threshold
+	# for as long as the outgoing (the other slot) is still above it. The
+	# incoming's own _slot_elapsed_ms keeps accumulating throughout — only
+	# the number written to modulate.a is held back — so once the cap lifts
+	# the incoming may jump straight to wherever its real timer already is,
+	# rather than restarting its fade-in.
+	var incoming_slot := _active_label_index
+	var outgoing_slot := 1 - _active_label_index
+	var display_alpha: Array = raw_alpha.duplicate()
+	if raw_alpha[outgoing_slot] > LEGIBILITY_THRESHOLD:
+		display_alpha[incoming_slot] = minf(raw_alpha[incoming_slot], LEGIBILITY_THRESHOLD)
+
+	for slot in [0, 1]:
+		if not was_visible[slot]:
 			continue
-		if elapsed < LINE_RELEASE_GATE_MS:
-			if label != null:
-				label.modulate.a = 1.0
-			continue
-		# Past its own 1800 ms floor: this slot clears itself over 300 ms
-		# regardless of whether a successor has shown yet (Scope 3 — see the
-		# comment on _slot_visible for why the clear can't wait on that).
-		var fade_elapsed: float = elapsed - LINE_RELEASE_GATE_MS
-		if fade_elapsed >= LINE_FADE_MS:
-			_slot_visible[slot] = false
+		var label := _label_for(slot)
+		if hidden_index[slot] >= 0:
 			if label != null:
 				label.hide()
-			line_hidden.emit(_slot_index[slot])
-			if slot == _active_label_index:
-				_line_visible = false
-			continue
-		if label != null:
-			label.modulate.a = 1.0 - clampf(fade_elapsed / LINE_FADE_MS, 0.0, 1.0)
+			line_hidden.emit(hidden_index[slot])
+		elif label != null:
+			label.modulate.a = display_alpha[slot]
 
 
 func current_line_text() -> String:
