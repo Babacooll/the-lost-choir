@@ -255,8 +255,14 @@ func test_no_blank_interval_between_consecutive_narrative_lines() -> void:
 	await get_tree().physics_frame
 
 	assert_not_null(encounter._label, "the scene-instantiated bearer must resolve a real NarrativeLayer/Label")
-	assert_not_null(encounter._label_b, "the scene-instantiated bearer must resolve a second crossfade label")
-	if encounter._label == null or encounter._label_b == null:
+	# encounter.get(...) rather than encounter._label_b: a direct property
+	# access raises a script error (not a failed assertion GUT can score) if
+	# _label_b is ever removed from the encounter script, which would abort
+	# this test's body silently green instead of red — the same "reports
+	# coverage it isn't providing" defect class as tests/unit/test_return.gd.
+	var label_b = encounter.get("_label_b")
+	assert_not_null(label_b, "the scene-instantiated bearer must resolve a second crossfade label")
+	if encounter._label == null or label_b == null:
 		return  # nothing further to check without both labels to observe
 
 	await _wait_until(func(): return encounter._emitter.is_open())
@@ -280,7 +286,7 @@ func test_no_blank_interval_between_consecutive_narrative_lines() -> void:
 	var ticks := 0
 	var post_swap_ticks := 0
 	while post_swap_ticks < 20 and ticks < 260:
-		var combined := _visible_alpha(encounter._label) + _visible_alpha(encounter._label_b)
+		var combined := _visible_alpha(encounter._label) + _visible_alpha(label_b)
 		min_combined_alpha = minf(min_combined_alpha, combined)
 		if encounter.narrative_lines_delivered() >= 2:
 			post_swap_ticks += 1

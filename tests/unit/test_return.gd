@@ -34,6 +34,12 @@ func before_each() -> void:
 	add_child_autofree(_reed)
 	_reed.global_position = Vector2(30, 16)  # within the 40 px lunge reach — opens a tell fast
 	_reed.set_player(_player)
+	# Reed Husk's real HP (3, §5.1) is exactly RETURN_DAMAGE (STRIKE_DAMAGE x
+	# 3) — a Return in these tests would be lethal, freeing this node via
+	# EnemyBase._die() before the test can inspect its post-hit hp/_emitter.
+	# Inflate it here so the target survives the hit under test; the real
+	# 3 HP KO threshold isn't what this file is testing.
+	_reed.hp = 1000
 
 	_input = InputSender.new(Input)
 	await get_tree().physics_frame
