@@ -41,39 +41,34 @@ static func contour_color(role: String) -> Color:
 
 ## Applies the layer to one fill polygon: opaque flat fill, cold-derive
 ## dropped (caller is responsible for not assigning a ShaderMaterial after
-## this call), and a 2px contour child drawn behind the fill so only its
-## outer edge shows as a hard outline.
+## this call), and a 2px contour drawn behind the fill so only its outer
+## edge shows as a hard outline — on any polygon, convex or concave (doc
+## §4b "the contour mechanism has to change").
 func apply(polygon: Polygon2D, role: String) -> void:
 	if not enabled or not ROLES.has(role):
 		return
 	polygon.material = null
 	polygon.color = fill_color(role)
 
-	var contour := Polygon2D.new()
+	# A closed Line2D of width 2*CONTOUR_WIDTH centred exactly on the
+	# silhouette outline: half the stroke falls outside the fill, the fill
+	# covers the inner half, so the visible contour is 2px on any polygon
+	# with no offset maths to get wrong. The previous approach (offsetting
+	# each vertex away from the centroid, per axis) was only correct for
+	# axis-aligned rectangles — thinner than 2px on a sloped edge and
+	# offsetting in the wrong direction entirely at a concave vertex, which
+	# every silhouette in §4b has.
+	var contour := Line2D.new()
 	contour.name = "PlaceholderContour"
-	contour.polygon = _expand(polygon.polygon, CONTOUR_WIDTH)
-	contour.color = contour_color(role)
-	# Behind the fill by tree order, not by sinking to a lower z (doc §3 rule
-	# 6) — a lower z falls below the terrain solids at z 0 and gets painted
-	# over wherever the element overlaps terrain, which is exactly where the
-	# contour is the only value clearing the floor.
+	contour.points = polygon.polygon
+	contour.closed = true
+	contour.width = CONTOUR_WIDTH * 2.0
+	contour.default_color = contour_color(role)
+	contour.joint_mode = Line2D.LINE_JOINT_SHARP
+	contour.antialiased = false
+	# Behind the fill by tree order, not by sinking to a lower z (doc §3
+	# rule 6) — a lower z falls below the terrain solids at z 0 and gets
+	# painted over wherever the element overlaps terrain, which is exactly
+	# where the contour is the only value clearing the floor.
 	contour.show_behind_parent = true
 	polygon.add_child(contour)
-
-
-## Every element this layer covers is an axis-aligned rectangle (doc §7
-## scope list), so growing each vertex away from the centroid independently
-## per axis is a correct outward offset, not just an approximation — it is
-## not a general polygon-offset for arbitrary shapes.
-func _expand(points: PackedVector2Array, width: float) -> PackedVector2Array:
-	var centroid := Vector2.ZERO
-	for p in points:
-		centroid += p
-	centroid /= points.size()
-
-	var out := PackedVector2Array()
-	for p in points:
-		var dx := signf(p.x - centroid.x)
-		var dy := signf(p.y - centroid.y)
-		out.append(p + Vector2(dx, dy) * width)
-	return out

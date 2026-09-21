@@ -17,5 +17,5 @@ shape = SubResource("RectangleShape2D_reed")
 [node name="Visual" type="Polygon2D" parent="."]
 script = ExtResource("2_legibility")
 color = Color(0.55, 0.32, 0.24, 1)
-polygon = PackedVector2Array(-8, -32, 8, -32, 8, 0, -8, 0)
+polygon = PackedVector2Array(-16, 0, -5, -22, 5, -22, 16, 0)
 role = "reed_husk"

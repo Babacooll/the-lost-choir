@@ -17,5 +17,5 @@ shape = SubResource("RectangleShape2D_keening")
 [node name="Visual" type="Polygon2D" parent="."]
 script = ExtResource("2_legibility")
 color = Color(0.42, 0.3, 0.5, 1)
-polygon = PackedVector2Array(-8, -36, 8, -36, 8, 0, -8, 0)
+polygon = PackedVector2Array(-9, 0, -3, -48, 3, -48, 9, 0)
 role = "keening_husk"
