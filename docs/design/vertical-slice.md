@@ -303,7 +303,7 @@ Authored in LDtk per `ARCHITECTURE.md`. Camera: per-room bounds, no scrolling ac
 | **R2 — Reed Gallery** | "What can I do to the world?" → "Something is speaking at me." | Strike, on a passive cracked husk that does not fight back, in the entry half. Then **one** Reed Husk in the far half — wide flat floor, no pit, no second enemy. Answer is taught here or nowhere. The two beats stay sequenced by floor layout rather than by a door. | — |
 | ~~R3~~ | *cut 2026-09-20 — folded into R2 (§13). The label is retired, not reused: R4–R8 keep their numbers so in-flight work and open PRs stay valid.* | — | — |
 | **R4 — Membrane Hall** | "I can see where I can't go." | Slack membranes; a visibly unreachable upper ledge leading to R5's high route and to R8. A shortcut door to R7, barred from this side. | Sustain (visible, unusable) |
-| **R5 — The Colonnade** | "This is harder and I'm exposed." | Vertical pipe-organ climb. One Reed Husk on a mid-ledge, one Keening Husk above it. Falling costs progress, not life. | — |
+| **R5 — The Colonnade** | "This is harder and I'm exposed." | Vertical pipe-organ climb. One Reed Husk at the foot of the climb, one Keening Husk on the top ledge guarding the exit (see *R5 encounter placement* below). Falling costs progress, not life. | — |
 | **R6 — The Cold Amphitheater** | "Someone is here, and they stopped." | The Verse-bearer. The restoration encounter (§7). | — |
 | **R7 — The Warm Return** | "Oh — I've been here." | Sustain-gated membrane route; opens the shortcut door back into R4 and the drop to R1. Closes the loop. | Sustain (required) |
 | **R8 — The Cracked Bell** | "I wonder." | Optional. Reached from R4's high ledge using Sustain + a breath-tight route. Contains a narrative fragment only — **no ability, no upgrade, no collectible counter.** | Sustain + execution |
@@ -328,6 +328,44 @@ because both beats keep their stakes-free floor; if a playtester reports R2 as *
 
 **No room may be decorated to look complete.** Every screen in this slice must serve a row of this
 table. If a space serves none, cut it.
+
+### R5 encounter placement
+
+*Added 2026-09-22, out of MICH-615.* R5's two husks were authored at (190, 412) — Reed Husk, ledge 2 —
+and (53, 312) — Keening Husk, ledge 4. Those markers sat inert until MICH-615 wired `EnemyMarker`
+spawning up, and spawning them revealed that the placement contradicts the row above. From the
+authored entry point (32, 504) the Reed Husk is **183 px** away against a 220 px aggro range, and the
+Keening Husk is **193 px** away against 380 px. Both acquire the player on arrival, before a single
+jump; the Reed Husk then leaves its ledge to fight on the floor. R5 becomes a two-register brawl at
+the door followed by an empty climb — the inverse of "this is harder and I'm exposed" — and the
+player's first exposure to the keening register arrives underneath an open percussive tell, which is
+the one overlap H6 cannot afford.
+
+Binding placement rules:
+
+- **P1 — Entry is quiet.** Standing at the R5→R4 door, no husk may be in aggro range, with **≥48 px
+  of margin**. The player reads the room before the room answers back.
+- **P2 — The keening register belongs to the top.** The Keening Husk's aggro circle must not
+  intersect the floor slab (top edge y = 528) anywhere. At 380 px that admits only ledge 8
+  (y = 128 → 112 + 380 = 492 < 528); ledge 7 fails (542 > 528). The new register is met at maximum
+  height, guarding the exit, where falling costs the most progress.
+- **P3 — The Reed Husk holds the foot of the climb.** It stays the lower, already-taught encounter
+  and must satisfy P1. If no existing ledge admits that with margin, move the ledge — do not nudge a
+  marker onto the boundary.
+
+**What these rules do not promise** is that the player ever hears a keening tell with no Reed Husk
+engaged. R5 is 460 × 560 and the two aggro ranges sum to 600. Checking every marker slot on every
+ledge, exactly one configuration separates the two encounters by more than 380 px, and it clears by
+**7 px** — and the Reed Husk chases, so it does not hold once the fight starts. **Sequenced
+engagement is not achievable in R5 at its current size.** Overlap during the climb is therefore
+accepted for the slice, and is R5's intended pressure: two enemies, height, falling costs progress.
+The isolated percussive data point H6 needs already exists in R2, where it is taught alone on a flat
+floor.
+
+If playtest reports the two registers as muddy rather than layered, the fix is to **grow R5
+vertically**, not to shrink either aggro range — standing off at distance is what makes the Keening
+Husk read as the keening register at all. §5.1 and §5.2 are unchanged by any of this: no tell lead,
+HP, reach, recovery, aggro range or compression floor moves.
 
 ---
 
