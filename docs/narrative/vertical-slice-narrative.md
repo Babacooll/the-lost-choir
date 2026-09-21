@@ -137,12 +137,25 @@ is a defeat. "Answer it anyway" is the playable form of *choosing to sing it aga
    `Label` nodes rather than one, so a single label isn't forced to fade one line out while fading
    the next in on the same node. "Only one line ever meaningfully legible (rendered alpha ≥ 0.30) at
    a time" is enforced directly, not left to the two fades' timing: while the outgoing label's alpha
-   is above 0.30, the incoming label's *displayed* alpha is capped at 0.30 (its own fade-in timer
-   keeps running underneath the cap, so it can jump forward once the cap lifts rather than restart).
-   An earlier version derived the same property from timing alone — the outgoing starting its clear
-   at its own 1800 ms floor instead of waiting for the incoming's release — which holds on a
-   zero-jitter input but was found not to survive ordinary answer-timing variation. This is a build
-   note, not a change to the rule above.
+   is above 0.30, the incoming label's *displayed* alpha is capped at 0.30. Releasing the cap does
+   not snap the incoming straight to wherever its own fade-in timer has reached underneath the cap —
+   that would show as a one-frame pop — it resumes ramping from the capped value at the normal
+   200 ms-equivalent rate instead, so it always arrives as a fade, just possibly a later one.
+
+   The release *cadence* — which gap-opening event shows the next line — is counted, not
+   time-gated: every second gap-opening event (a resolved note or a miss, rule 3 makes a miss a gap
+   too) releases the next line, so line 1 releases on the 1st event, line 2 on the 3rd, line 3 on
+   the 5th, line 4 on the 7th. This is what makes rule 5's mapping exact and unconditional — it no
+   longer depends on reaction time at all. Rule 2's "one line per gap" is therefore a maximum rate,
+   not the actual cadence; the real cadence is every *second* gap. An earlier version derived both
+   the mutual-exclusion property and the release cadence from timing alone — the outgoing starting
+   its clear at its own 1800 ms floor instead of waiting for the incoming's release, and a line
+   releasing once 2000 ms had elapsed since the previous one — which both hold on a zero-jitter
+   input but were found not to survive ordinary answer-timing variation (the counted cadence is
+   only safe because the alpha cap already exists: a counted release can land earlier than 2000 ms
+   on the outgoing without cutting its hold short, since the outgoing's own floor and fade-out run
+   on its own clock regardless of when a successor is told to show). This is a build note, not a
+   change to the rule above.
 5. **Once the lines are spent, the encounter is wordless.** On a clean run this is deliberate and
    load-bearing: attempt 1 (3 notes) carries lines 1–2, attempt 2 (4 notes) carries lines 3–4, and
    the final 5-note phrase — the one that actually restores the Verse — has **no text at all**. The

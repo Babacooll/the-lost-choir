@@ -79,6 +79,35 @@ func _fail_full_attempt(max_ticks: int = 240) -> void:
 	await _wait_until(func(): return _encounter.state == _encounter.State.OFFERING, max_ticks)
 
 
+## before_each's shared _encounter keeps its own tell cycling (open, miss at
+## 700 ms, 1400 ms silence, re-offer) independently of anything a test does
+## with a separately-instantiated encounter — and both register with the
+## same PlayerCombat. A test driving its own encounter(s) through exact note
+## counts must retire this one first, or an Answer press can occasionally
+## resolve the shared encounter's tell instead via §5 shared rule 6's
+## soonest-closing arbitration, corrupting the note/attempt count a mapping
+## assertion depends on (harmless for tests that only care about eventually
+## reaching a state, which is why this went unnoticed until a mapping test
+## needed exact counts).
+func _retire_shared_encounter() -> void:
+	_encounter.queue_free()
+	await get_tree().physics_frame
+
+
+## A successful Answer holds PlayerCombat.answer_state in ACTIVE_POSE for a
+## fixed 180 ms (ANSWER_ACTIVE_POSE_MS) before returning to IDLE — and only
+## IDLE reads a new press (_update_answer's AnswerState.IDLE branch is the
+## only one that checks _answer_buffer.just_pressed). A multi-encounter test
+## that presses again shortly after a prior encounter's final successful
+## Answer can land inside that 180 ms window and have the press silently
+## dropped — not mis-resolved, just never read — which then times out into
+## a real miss with no arbitration conflict to explain it. Sweep tests that
+## instantiate a fresh encounter per iteration and press again quickly must
+## wait this out first.
+func _wait_for_answer_idle() -> void:
+	await _wait_until(func(): return _player.combat.answer_state == _player.combat.AnswerState.IDLE, 30)
+
+
 func test_first_note_opens_immediately_with_700ms_lead() -> void:
 	assert_true(_encounter._emitter.is_open())
 	assert_eq(_encounter._emitter.lead_time_ms, 700.0, "§7.1: each note is a tell with a 700 ms lead")
@@ -319,6 +348,7 @@ func test_only_one_line_is_ever_meaningfully_legible_at_a_time() -> void:
 ## not just the nominal one — sweep the delay across and past Reviewer's
 ## measured violating band.
 func test_only_one_line_legible_across_a_sweep_of_first_note_answer_delays() -> void:
+	await _retire_shared_encounter()
 	var delays_ms: Array = [0.0, 100.0, 133.0, 150.0, 167.0, 200.0, 233.0, 267.0]
 	var all_violations := []
 
@@ -337,6 +367,7 @@ func test_only_one_line_legible_across_a_sweep_of_first_note_answer_delays() -> 
 			await get_tree().physics_frame
 			continue
 
+		await _wait_for_answer_idle()
 		await _wait_until(func(): return encounter._emitter.is_open())
 		# Delay only the run's first answer — every note after it is still
 		# answered the instant its window opens. The delay shifts when the
@@ -373,6 +404,98 @@ func test_only_one_line_legible_across_a_sweep_of_first_note_answer_delays() -> 
 
 	assert_eq(all_violations.size(), 0,
 		"both labels were >= 0.30 alpha at the same frame for at least one first-note delay in the sweep: %s" % [all_violations])
+
+
+## Game Designer's ruling (Scope 3 remediation cycle 3): the counted release
+## cadence (every second gap-opening event, not a wall-clock gate) makes
+## rule 5's attempt->line mapping exact and unconditional — it no longer
+## depends on reaction time at all, only on which numbered gap a release
+## lands on. Re-run the same first-note-delay sweep as the mutual-exclusion
+## test above, but assert the mapping itself: every delay must reproduce
+## attempt 1 -> lines 1+2, attempt 2 -> lines 3+4, the 5-note restoring
+## phrase -> no new line, exactly — not just "no visual overlap."
+func test_rule5_mapping_holds_exactly_across_a_sweep_of_first_note_answer_delays() -> void:
+	await _retire_shared_encounter()
+	var delays_ms: Array = [0.0, 100.0, 150.0, 200.0, 250.0, 300.0, 400.0]
+	var failures := []
+	var expected := [[0, 3, 1], [1, 3, 3], [2, 4, 2], [3, 4, 4]]
+
+	for delay_ms in delays_ms:
+		var encounter = RestorationEncounterScript.new()
+		add_child(encounter)
+		encounter.global_position = Vector2(100, 20)
+		encounter.set_player(_player)
+		await get_tree().physics_frame
+		await get_tree().physics_frame
+
+		var mapping := []
+		encounter.line_shown.connect(
+			func(index, _text): mapping.append([index, encounter._phrase_length, encounter._note_index])
+		)
+
+		await _wait_for_answer_idle()
+		await _wait_until(func(): return encounter._emitter.is_open())
+		var delay_ticks := int(round(delay_ms / (1000.0 / 60.0)))
+		for i in range(delay_ticks):
+			await get_tree().physics_frame
+		await _press_answer()
+
+		# Answer everything else the instant it opens, through all three
+		# attempts (3 + 4 + 5 = 12 notes total, the first already answered
+		# above) to RESTORED.
+		var ticks := 0
+		while encounter.state != encounter.State.RESTORED and ticks < 900:
+			if encounter._emitter.is_open():
+				await _press_answer()
+			else:
+				await get_tree().physics_frame
+			ticks += 1
+
+		if encounter.state != encounter.State.RESTORED:
+			failures.append("delay=%dms: never reached RESTORED" % delay_ms)
+		elif mapping != expected:
+			failures.append("delay=%dms mapping=%s expected=%s" % [delay_ms, mapping, expected])
+
+		encounter.queue_free()
+		await get_tree().physics_frame
+
+	assert_eq(failures.size(), 0,
+		"rule 5's attempt->line mapping must hold exactly at every first-note delay in the sweep: %s" % [failures])
+
+
+## Game Designer: a miss is explicitly allowed to drift rule 5's mapping —
+## "rule 5 is a clean-run contract only." What must NOT happen is a crashed
+## gap counter or the same line index released twice. A miss is a gap in
+## its own right (rule 3), so it still advances the counted cadence exactly
+## like a resolved note.
+func test_a_miss_early_in_the_run_does_not_crash_the_counter_or_double_release() -> void:
+	var mapping := []
+	_encounter.line_shown.connect(func(index, _text): mapping.append(index))
+
+	# Let the very first note miss (never press Answer, letting its 700 ms
+	# lead elapse and the phrase restart after the 1400 ms silence), then
+	# answer everything else the instant it opens, through to RESTORED.
+	await _fail_full_attempt()
+	var ticks := 0
+	while _encounter.state != _encounter.State.RESTORED and ticks < 900:
+		if _encounter._emitter.is_open():
+			await _press_answer()
+		else:
+			await get_tree().physics_frame
+		ticks += 1
+
+	assert_eq(_encounter.state, _encounter.State.RESTORED,
+		"the encounter must still reach RESTORED after an early miss, not stall the counter")
+
+	var seen := {}
+	for idx in mapping:
+		assert_false(seen.has(idx), "line index %d was released more than once: %s" % [idx, mapping])
+		seen[idx] = true
+	for i in range(1, mapping.size()):
+		assert_true(mapping[i] > mapping[i - 1],
+			"line indices must arrive strictly increasing, never rewinding (rule 2): %s" % [mapping])
+	assert_true(mapping.size() <= _encounter.MAX_NARRATIVE_LINES,
+		"no more than %d lines should ever be released regardless of how the run degrades: %s" % [_encounter.MAX_NARRATIVE_LINES, mapping])
 
 
 func test_narrative_lines_match_the_approved_restoration_narrative() -> void:

@@ -27,11 +27,12 @@ const LINE_MIN_HOLD_MS: float = 1800.0
 const LINE_FADE_IN_MS: float = 200.0
 const LINE_FADE_MS: float = 300.0
 ## Elapsed time since a line's onset at which its own 1800 ms floor of full
-## legibility is reached. Two things happen at this mark: it becomes the
-## earliest a successor may show (§3.2 rule 4's "whichever is later"), AND
-## the line begins clearing itself over its own 300 ms fade-out regardless of
-## whether a successor has actually shown yet — Scope 3's fix for two lines
-## never being simultaneously legible (see _slot_visible's comment).
+## legibility is reached, and it begins clearing itself over its own 300 ms
+## fade-out — unconditionally, on its own clock, regardless of whether or
+## when a successor shows (Scope 3's fix for two lines never being
+## simultaneously legible; see _slot_visible's comment). This no longer
+## gates a successor's release either — see _maybe_release_narrative_line's
+## counted cadence (Scope 3 remediation cycle 3, Game Designer's ruling).
 const LINE_RELEASE_GATE_MS: float = LINE_FADE_IN_MS + LINE_MIN_HOLD_MS
 const MAX_NARRATIVE_LINES: int = 4
 
@@ -76,6 +77,12 @@ var _narrative_index: int = 0
 var _line_visible: bool = false
 var _current_line_text: String = ""
 
+## Counts gap-opening events (every call to _on_note_resolved or
+## _on_note_missed — a miss is a gap in its own right per rule 3) so the
+## release cadence can be exact and unconditional rather than derived from
+## wall-clock timing (see _maybe_release_narrative_line).
+var _gap_event_count: int = 0
+
 ## Which of the two labels (0 = _label, 1 = _label_b) most recently received
 ## a line — the two ping-pong on every show, one slot ahead. _line_visible /
 ## current_line_text() report on this slot, since it's always the most
@@ -110,6 +117,19 @@ var _active_label_index: int = 0
 var _slot_visible: Array = [false, false]
 var _slot_elapsed_ms: Array = [0.0, 0.0]
 var _slot_index: Array = [-1, -1]
+
+## The actual rendered alpha per slot — distinct from each slot's RAW
+## elapsed-time-based alpha once the mutual-exclusion cap is in play. A
+## capped incoming's raw alpha keeps climbing (or plateaus at 1.0) while its
+## displayed value sits pinned at LEGIBILITY_THRESHOLD; releasing the cap
+## would otherwise jump straight to that far-ahead raw value in one frame,
+## which reads as a flash rather than a fade (Game Designer's refinement,
+## Scope 3 remediation cycle 3). _tick_narrative chases this toward its
+## (possibly capped) target at the same rate as a normal 200 ms fade-in,
+## which is a no-op whenever nothing is capped — an uncapped slot's own raw
+## ramp already moves at exactly that rate — and only actually slows things
+## down right after a cap releases.
+var _slot_display_alpha: Array = [0.0, 0.0]
 
 @onready var _label: Label = get_node_or_null("NarrativeLayer/Label")
 @onready var _label_b: Label = get_node_or_null("NarrativeLayer/LabelB")
@@ -240,23 +260,37 @@ func _restore() -> void:
 
 # --- Narrative delivery (§7 narrative delivery section, §11 AC#14) ---------
 
-## The gate a line's own floor opens (§3.2 rule 4: 1800 ms of full legibility
-## measured from the end of its 200 ms fade-in) still governs the earliest a
-## successor may show — unchanged from Scope 1. What changed in Scope 3 is
-## only when the OUTGOING line starts visually clearing: see _tick_narrative,
-## which starts that the moment the outgoing's own floor is reached, not
-## when this function next runs. Whether that head start is enough to keep
-## both labels' rendered alpha from crossing LEGIBILITY_THRESHOLD at once is
-## no longer left to the gap schedule's margin — _tick_narrative clamps the
-## incoming's displayed alpha directly whenever the outgoing is still above
-## threshold, so the mutual-exclusion contract holds regardless of jitter.
+## §3.2 rules 4+5 (Scope 3 remediation cycle 3, Game Designer's ruling): the
+## release cadence is COUNTED, not time-gated. A time threshold compared
+## against an answer-jittered trigger has a cliff — reaction-time variation
+## on the note grid (fixed onsets, jittered resolutions) can push a release
+## either side of any fixed millisecond gate, which is exactly what slipped
+## rule 5's attempt->line mapping under ordinary reaction time. Counting
+## removes the cliff entirely: every SECOND gap-opening event (a resolved
+## note or a miss — rule 3 makes a miss a gap in its own right) releases the
+## next line, unconditionally — line 1 on the 1st event, line 2 on the 3rd,
+## line 3 on the 5th, line 4 on the 7th. Rule 2's "one line per gap" is a
+## maximum rate; every second gap is the real cadence.
+##
+## This is safe only because the mutual-exclusion cap in _tick_narrative
+## already exists: a counted release can now land earlier than 2000 ms
+## elapsed on the outgoing (e.g. a slow-but-not-missed reaction to the
+## PREVIOUS note shrinks the gap between this release and the last one), but
+## that no longer matters. The outgoing's own floor and 300 ms fade-out run
+## on its own clock regardless of when a successor is told to show — it
+## still gets its full 1800 ms unconditionally — and the cap keeps the
+## incoming pinned at or below LEGIBILITY_THRESHOLD for however long the
+## outgoing is still above it, however much longer that now is on an early
+## release. Counting only ever decides *when a slot is told to start
+## becoming visible*; the floor and the mutual exclusion are each protected
+## by a different, untouched mechanism.
 func _maybe_release_narrative_line() -> void:
+	_gap_event_count += 1
 	if _narrative_index >= MAX_NARRATIVE_LINES or _narrative_index >= NARRATIVE_LINES.size():
 		return
+	if _gap_event_count % 2 == 0:
+		return  # this gap doesn't land on the counted release cadence
 	var active_slot_visible: bool = _slot_visible[_active_label_index]
-	var active_slot_elapsed: float = _slot_elapsed_ms[_active_label_index]
-	if active_slot_visible and active_slot_elapsed < LINE_RELEASE_GATE_MS:
-		return  # the current line hasn't held its full 1800 ms of legibility yet
 	if active_slot_visible:
 		_active_label_index = 1 - _active_label_index
 	_show_line(_narrative_index)
@@ -267,6 +301,7 @@ func _show_line(index: int) -> void:
 	var slot := _active_label_index
 	_slot_visible[slot] = true
 	_slot_elapsed_ms[slot] = 0.0
+	_slot_display_alpha[slot] = 0.0
 	_slot_index[slot] = index
 	_line_visible = true
 	_current_line_text = NARRATIVE_LINES[index]
@@ -315,17 +350,37 @@ func _tick_narrative(delta_ms: float) -> void:
 	# (Engineering Lead's ruling, Scope 3 remediation — see LEGIBILITY_
 	# THRESHOLD and the comment on _slot_visible for why the margin alone
 	# wasn't robust to answer-timing jitter). The incoming (the most
-	# recently shown slot) has its displayed alpha capped at the threshold
+	# recently shown slot) has its displayed TARGET capped at the threshold
 	# for as long as the outgoing (the other slot) is still above it. The
 	# incoming's own _slot_elapsed_ms keeps accumulating throughout — only
-	# the number written to modulate.a is held back — so once the cap lifts
-	# the incoming may jump straight to wherever its real timer already is,
-	# rather than restarting its fade-in.
+	# the target is held back, not the timer — so once the cap lifts, its
+	# target may be far ahead of where the display currently sits.
 	var incoming_slot := _active_label_index
 	var outgoing_slot := 1 - _active_label_index
-	var display_alpha: Array = raw_alpha.duplicate()
+	var target_alpha: Array = raw_alpha.duplicate()
 	if raw_alpha[outgoing_slot] > LEGIBILITY_THRESHOLD:
-		display_alpha[incoming_slot] = minf(raw_alpha[incoming_slot], LEGIBILITY_THRESHOLD)
+		target_alpha[incoming_slot] = minf(raw_alpha[incoming_slot], LEGIBILITY_THRESHOLD)
+
+	# Pass 3: chase the (possibly capped) target at the same rate as a
+	# normal 200 ms fade-in, rather than snapping the displayed value
+	# straight to it. With the counted cadence (Scope 3 remediation cycle 3)
+	# a release can land well before the outgoing's own floor, so the cap
+	# can now hold the incoming back for far longer than cycle 2 saw — long
+	# enough that its raw alpha has already reached 1.0 underneath the cap.
+	# Releasing straight to that value would jump the display by more than
+	# the threshold in a single frame, which reads as a flash, not a fade
+	# (Game Designer's refinement). This is a no-op whenever nothing is
+	# capped: an uncapped slot's own raw alpha already changes by exactly
+	# this much each frame, so "chase at this rate" and "snap to the raw
+	# value" produce the same number.
+	var max_step: float = delta_ms / LINE_FADE_IN_MS
+	for slot in [0, 1]:
+		if not was_visible[slot] or hidden_index[slot] >= 0:
+			continue
+		if target_alpha[slot] > _slot_display_alpha[slot] + max_step:
+			_slot_display_alpha[slot] += max_step
+		else:
+			_slot_display_alpha[slot] = target_alpha[slot]
 
 	for slot in [0, 1]:
 		if not was_visible[slot]:
@@ -336,7 +391,7 @@ func _tick_narrative(delta_ms: float) -> void:
 				label.hide()
 			line_hidden.emit(hidden_index[slot])
 		elif label != null:
-			label.modulate.a = display_alpha[slot]
+			label.modulate.a = _slot_display_alpha[slot]
 
 
 func current_line_text() -> String:
