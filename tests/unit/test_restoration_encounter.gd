@@ -185,33 +185,56 @@ func test_completing_attempts_extends_the_phrase_then_restores_on_5() -> void:
 	assert_eq(_encounter.state, _encounter.State.RESTORED)
 
 
-func test_narrative_line_holds_at_least_1800ms() -> void:
+## §3.2 rule 4: full legibility is a minimum of 1800 ms measured from the end
+## of the 200 ms fade-in — a 2000 ms floor from the line's onset — not the
+## 1800-ms-from-onset window the pre-fix implementation held it for.
+func test_narrative_line_holds_full_legibility_for_1800ms_after_fade_in() -> void:
 	await _wait_until(func(): return _encounter._emitter.is_open())
 	await _press_answer()
 	await _wait_until(func(): return _encounter.narrative_lines_delivered() >= 1, 120)
 	assert_true(_encounter._line_visible, "the first line should show at the first gap")
 
-	# Keep answering every note that opens while the hold plays out, so no
-	# missed note's silence gap coincidentally lands on (and races) the
-	# 1800 ms hold boundary this test is asserting against — notes are
-	# spaced close enough to it (1100 ms) that an unanswered one would.
+	# Keep answering every note that opens so a release attempt (a gap) keeps
+	# firing roughly every 1100 ms — close enough to the 2000 ms gate that an
+	# early gate would show up here as a premature swap to line 2.
 	var ticks := 0
-	while ticks < 85:  # ~1.4 s — still short of the 1800 ms hold
+	while _encounter._line_elapsed_ms < 1900.0 and ticks < 200:
 		if _encounter._emitter.is_open():
 			await _press_answer()
 		else:
 			await get_tree().physics_frame
 		ticks += 1
-	assert_true(_encounter._line_visible, "a line must not hide before its 1800 ms minimum hold elapses")
 
-	ticks = 0
-	while _encounter._line_visible and ticks < 60:
+	assert_eq(_encounter.narrative_lines_delivered(), 1,
+		"line 1 must still be the only line delivered just short of its 1800 ms full-legibility floor")
+	assert_true(_encounter._line_visible, "line 1 must not hide before its full-legibility floor elapses")
+
+
+## §3.2 rule 4: a line clears when the next line begins, or after its 1800 ms
+## floor, whichever is later — on a clean run there is no blank interval
+## between two consecutive lines, unlike the pre-fix implementation's ~400 ms
+## dead beat between a line's 1800 ms hold expiring and the next gap arriving.
+func test_no_blank_interval_between_consecutive_narrative_lines() -> void:
+	await _wait_until(func(): return _encounter._emitter.is_open())
+	await _press_answer()
+	await _wait_until(func(): return _encounter.narrative_lines_delivered() >= 1, 120)
+	assert_true(_encounter._line_visible, "the first line should show at the first gap")
+
+	var observed_blank := false
+	var ticks := 0
+	while _encounter.narrative_lines_delivered() < 2 and ticks < 260:
+		if not _encounter._line_visible:
+			observed_blank = true
 		if _encounter._emitter.is_open():
 			await _press_answer()
 		else:
 			await get_tree().physics_frame
 		ticks += 1
-	assert_false(_encounter._line_visible, "a line must hide once its 1800 ms minimum hold (plus fade) elapses")
+
+	assert_eq(_encounter.narrative_lines_delivered(), 2,
+		"line 2 should have released by now on a clean run of continuous answers")
+	assert_false(observed_blank,
+		"the line must never go invisible between line 1 clearing and line 2 beginning")
 
 
 func test_narrative_lines_match_the_approved_restoration_narrative() -> void:
