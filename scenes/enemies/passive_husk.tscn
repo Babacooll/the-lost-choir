@@ -1,0 +1,18 @@
+[gd_scene load_steps=3 format=3 uid="uid://dyxg1c5q6h7wr"]
+
+[ext_resource type="Script" path="res://scripts/enemies/passive_husk.gd" id="1_passive"]
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_passive"]
+size = Vector2(16, 32)
+
+[node name="PassiveHusk" type="CharacterBody2D"]
+script = ExtResource("1_passive")
+floor_stop_on_slope = true
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+position = Vector2(0, -16)
+shape = SubResource("RectangleShape2D_passive")
+
+[node name="Visual" type="Polygon2D" parent="."]
+color = Color(0.55, 0.32, 0.24, 1)
+polygon = PackedVector2Array(-8, -32, 8, -32, 8, 0, -8, 0)

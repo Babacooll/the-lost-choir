@@ -29,6 +29,17 @@ const ENCOUNTER_SCENES := {
 	"verse_bearer_r6": VerseBearerScene,
 }
 
+const ReedHuskScene := preload("res://scenes/enemies/reed_husk.tscn")
+const KeeningHuskScene := preload("res://scenes/enemies/keening_husk.tscn")
+const PassiveHuskScene := preload("res://scenes/enemies/passive_husk.tscn")
+# EnemyMarker.enemy_type -> scene to spawn on it. Unrecognised enemy_types
+# stay inert markers, same contract as ENCOUNTER_SCENES above.
+const ENEMY_SCENES := {
+	"ReedHusk": ReedHuskScene,
+	"KeeningHusk": KeeningHuskScene,
+	"PassiveHusk": PassiveHuskScene,
+}
+
 const MembraneScene := preload("res://scenes/world/membrane.tscn")
 const BellFrameScene := preload("res://scenes/world/bell_frame.tscn")
 
@@ -106,7 +117,8 @@ func _build_from_ldtk() -> void:
 		player_start = LDtkProject.entity_position(entity)
 		_has_player_start = true
 	for entity in LDtkProject.get_entities(level, "EnemyMarker"):
-		_build_marker(entity, "enemy_type", "EnemyMarker")
+		var enemy_marker := _build_marker(entity, "enemy_type", "EnemyMarker")
+		_maybe_spawn_enemy(enemy_marker, LDtkProject.get_field(entity, "enemy_type", "unnamed"))
 	for entity in LDtkProject.get_entities(level, "EncounterMarker"):
 		var marker := _build_marker(entity, "encounter_id", "EncounterMarker")
 		_maybe_spawn_encounter(marker, LDtkProject.get_field(entity, "encounter_id", "unnamed"))
@@ -179,6 +191,13 @@ func _build_marker(entity: Dictionary, field_id: String, group_name: String) -> 
 	marker.set_meta(field_id, tag)
 	add_child(marker)
 	return marker
+
+
+func _maybe_spawn_enemy(marker: Marker2D, enemy_type: String) -> void:
+	if not ENEMY_SCENES.has(enemy_type):
+		return
+	var instance: Node2D = ENEMY_SCENES[enemy_type].instantiate()
+	marker.add_child(instance)
 
 
 func _maybe_spawn_encounter(marker: Marker2D, encounter_id: String) -> void:
