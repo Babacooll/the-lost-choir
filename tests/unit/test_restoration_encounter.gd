@@ -7,6 +7,7 @@ extends GutTest
 
 const PlayerScene := preload("res://scenes/player.tscn")
 const RestorationEncounterScript := preload("res://scripts/encounters/restoration_encounter.gd")
+const VerseBearerScene := preload("res://scenes/encounters/verse_bearer.tscn")
 const DoorScript := preload("res://scripts/levels/door.gd")
 
 var _player: CharacterBody2D
@@ -211,6 +212,49 @@ func test_narrative_line_holds_at_least_1800ms() -> void:
 			await get_tree().physics_frame
 		ticks += 1
 	assert_false(_encounter._line_visible, "a line must hide once its 1800 ms minimum hold (plus fade) elapses")
+
+
+func test_narrative_lines_match_the_approved_restoration_narrative() -> void:
+	assert_eq(_encounter.NARRATIVE_LINES, PackedStringArray([
+		"I was the ground note. Everything above was tuned to me.",
+		"I drifted. Slowly. For years. And they followed me down.",
+		"When I finally heard myself, I could not take it back.",
+		"This is the pitch I have left. Answer it anyway.",
+	]), "docs/narrative/vertical-slice-narrative.md §3.1 is the approved source; the bearer's words must match it verbatim")
+
+
+func test_narrative_line_fades_in_over_200ms_at_gap_onset() -> void:
+	# The shared _encounter from before_each is a bare RestorationEncounterScript.new()
+	# (a plain Node2D) with no NarrativeLayer/Label child, so its _label is null and
+	# any assertion on _label would silently no-op the whole test body. This test
+	# needs the real label, so it instantiates the actual scene instead.
+	var encounter = VerseBearerScene.instantiate()
+	add_child_autofree(encounter)
+	encounter.global_position = Vector2(100, 20)
+	encounter.set_player(_player)
+	await get_tree().physics_frame
+	await get_tree().physics_frame
+
+	assert_not_null(encounter._label, "the scene-instantiated bearer must resolve a real NarrativeLayer/Label")
+	if encounter._label == null:
+		return  # nothing further to check without a label to observe
+
+	await _wait_until(func(): return encounter._emitter.is_open())
+	await _press_answer()
+	await _wait_until(func(): return encounter.narrative_lines_delivered() >= 1, 120)
+	assert_true(encounter._line_visible, "the first line should show at the first gap")
+	# _tick_narrative only runs on the next physics step after _show_line, so the
+	# earliest observable alpha is ~1 tick into the 200 ms fade-in (16.67/200 ≈
+	# 0.083), not exactly 0.0 — assert a near-zero bound instead of exact equality.
+	assert_lt(encounter._label.modulate.a, 0.2, "a line should be close to transparent at gap onset (§3.2.4)")
+
+	await _wait_ticks(6)  # ~100 ms into the 200 ms fade-in
+	var mid_alpha: float = encounter._label.modulate.a
+	assert_true(mid_alpha > 0.0 and mid_alpha < 1.0,
+		"a line should be partway faded in ~100 ms into its 200 ms fade-in (§3.2.4)")
+
+	await _wait_until(func(): return encounter._label.modulate.a >= 1.0, 30)
+	assert_eq(encounter._label.modulate.a, 1.0, "a line must be fully legible once its 200 ms fade-in elapses")
 
 
 func test_narrative_index_persists_across_a_failed_attempt() -> void:
