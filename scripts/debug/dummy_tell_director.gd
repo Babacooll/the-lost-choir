@@ -7,6 +7,10 @@ extends Node
 ## exercise Answer without needing to lure a real enemy into range.
 
 const DEFAULT_LEAD_TIME_MS: float = 520.0  # the "mashing loses" reference tell from §3.3's design intent
+## Reuses the reed/percussive register so the debug key gets a real,
+## perceptible AudioDirector cue instead of an unhandled register that
+## falls through play_tell's match silently (MICH-614).
+const TELL_REGISTER := "percussive"
 
 @export var tell_emitter_path: NodePath
 @export var player_path: NodePath
@@ -21,7 +25,7 @@ func _ready() -> void:
 
 func _unhandled_input(event: InputEvent) -> void:
 	if event.is_action_pressed("debug_trigger_tell") and _tell_emitter != null:
-		_tell_emitter.open_tell(DEFAULT_LEAD_TIME_MS, "dummy")
+		_tell_emitter.open_tell(DEFAULT_LEAD_TIME_MS, TELL_REGISTER)
 		get_viewport().set_input_as_handled()
 
 
