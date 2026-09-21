@@ -52,6 +52,7 @@ func after_each() -> void:
 	_input = null
 	for node in get_tree().get_nodes_in_group("projectile"):
 		node.queue_free()
+	GameState.restoration_complete = false
 
 
 func _count_projectiles() -> int:
@@ -157,3 +158,42 @@ func test_takes_four_strikes_to_die() -> void:
 	await get_tree().physics_frame
 	await get_tree().process_frame
 	assert_false(is_instance_valid(_keening), "4 damage against 4 HP should kill it")
+
+
+## §4.2's Return kill chain against the enemy it actually matters for. Reed
+## Husk's 3 HP is exactly RETURN_DAMAGE (STRIKE_DAMAGE x 3) — a Return
+## always kills it, which is why tests/unit/test_return.gd needs an inflated
+## HP fixture to inspect Return's own numbers at all. Keening Husk's real 4
+## HP is the configuration a player actually reaches: Return leaves it alive
+## at 1 HP and staggered, so Answer -> Return -> a finishing Strike is the
+## kill chain, and RETURN_STAGGER_MS is the window that buys that last
+## Strike. No HP fixture here on purpose — this must run in the real number.
+func test_return_on_a_real_keening_husk_leaves_it_at_1hp_and_staggers_for_1600ms() -> void:
+	GameState.restoration_complete = true
+	await _wait_for_state(_keening, _keening.State.TELLING)
+
+	_input.action_down(&"answer")
+	await get_tree().physics_frame
+	_input.action_up(&"answer")
+	assert_eq(_player.combat.last_answer_result, "success")
+	assert_true(_player.combat.has_resolved_note())
+
+	_input.action_down(&"strike")
+	await get_tree().physics_frame
+	_input.action_up(&"strike")
+
+	var ticks := 0
+	while _player.combat.strike_state != _player.combat.StrikeState.ACTIVE and ticks < 20:
+		await get_tree().physics_frame
+		ticks += 1
+	assert_almost_eq(ticks * (1000.0 / 60.0), PlayerCombat.RETURN_STARTUP_MS, 20.0,
+		"Return's startup should be 120 ms against a resolved Keening Husk note, not Strike's 90 ms")
+
+	await get_tree().physics_frame  # the ACTIVE tick that executes Return
+
+	assert_true(is_instance_valid(_keening),
+		"a single Return (3 damage) against the Keening Husk's real 4 HP must not kill it")
+	assert_eq(_keening.hp, KeeningHusk.HP - PlayerCombat.RETURN_DAMAGE,
+		"§4.2: Return's 3x Strike damage against 4 HP should leave the Keening Husk at exactly 1")
+	assert_almost_eq(_keening._emitter.stagger_ms, PlayerCombat.RETURN_STAGGER_MS, 40.0,
+		"§4.2: Return should set the enemy's stagger to 1600 ms — the window that buys the finishing Strike")
