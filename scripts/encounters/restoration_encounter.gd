@@ -73,7 +73,23 @@ var _line_elapsed_ms: float = 0.0
 var _line_is_final: bool = false
 var _current_line_text: String = ""
 
+## Which of the two labels (0 = _label, 1 = _label_b) currently holds the
+## line tracked by _line_visible / _line_elapsed_ms. The two labels ping-pong
+## on every non-final release so an outgoing line's 300 ms fade-out can run
+## on one label while the incoming line's 200 ms fade-in runs on the other —
+## a genuine overlap, not a sequential hide-then-show (§3.2 rule 4).
+var _active_label_index: int = 0
+
+## The line clearing on the label _not_ currently active, mid its own
+## independent 300 ms fade-out timer. Only ever set on a "next line begins"
+## release — the final line's self-clear still runs through _line_elapsed_ms
+## on the single active label, untouched by this.
+var _outgoing_active: bool = false
+var _outgoing_elapsed_ms: float = 0.0
+var _outgoing_index: int = -1
+
 @onready var _label: Label = get_node_or_null("NarrativeLayer/Label")
+@onready var _label_b: Label = get_node_or_null("NarrativeLayer/LabelB")
 
 
 func _ready() -> void:
@@ -84,7 +100,13 @@ func _ready() -> void:
 	_emitter.tell_missed.connect(_on_note_missed)
 	if _label != null:
 		_label.hide()
+	if _label_b != null:
+		_label_b.hide()
 	_open_note()
+
+
+func _label_for(index: int) -> Label:
+	return _label if index == 0 else _label_b
 
 
 func _find_player() -> void:
@@ -201,9 +223,14 @@ func _maybe_release_narrative_line() -> void:
 	if _line_visible and _line_elapsed_ms < LINE_RELEASE_GATE_MS:
 		return  # the current line hasn't held its full 1800 ms of legibility yet
 	if _line_visible:
-		# The next line begins now, so the outgoing one clears in the same
-		# instant it's replaced — no blank interval between them (§3.2 rule 4).
-		_hide_current_line()
+		# The next line begins now: the outgoing line starts its own 300 ms
+		# fade-out on its label while the incoming line fades in on the other
+		# one, overlapping — a true crossfade, not a hide-then-show, so there
+		# is no blank frame between them (§3.2 rule 4).
+		_outgoing_active = true
+		_outgoing_elapsed_ms = 0.0
+		_outgoing_index = _narrative_index - 1
+		_active_label_index = 1 - _active_label_index
 	_show_line(_narrative_index)
 	_narrative_index += 1
 
@@ -213,35 +240,52 @@ func _show_line(index: int) -> void:
 	_line_elapsed_ms = 0.0
 	_line_is_final = index + 1 >= MAX_NARRATIVE_LINES or index + 1 >= NARRATIVE_LINES.size()
 	_current_line_text = NARRATIVE_LINES[index]
-	if _label != null:
-		_label.text = _current_line_text
-		_label.modulate.a = 0.0
-		_label.show()
+	var label := _label_for(_active_label_index)
+	if label != null:
+		label.text = _current_line_text
+		label.modulate.a = 0.0
+		label.show()
 	line_shown.emit(index, _current_line_text)
 
 
+## Only the final line's self-clear (no successor to release it) still goes
+## through this — a "next line begins" release clears the outgoing line via
+## the independent _outgoing_* fade in _tick_narrative instead.
 func _hide_current_line() -> void:
 	var index := _narrative_index - 1
 	_line_visible = false
-	if _label != null:
-		_label.hide()
+	var label := _label_for(_active_label_index)
+	if label != null:
+		label.hide()
 	line_hidden.emit(index)
 
 
 func _tick_narrative(delta_ms: float) -> void:
+	if _outgoing_active:
+		_outgoing_elapsed_ms += delta_ms
+		var outgoing_label := _label_for(1 - _active_label_index)
+		if _outgoing_elapsed_ms >= LINE_FADE_MS:
+			_outgoing_active = false
+			if outgoing_label != null:
+				outgoing_label.hide()
+			line_hidden.emit(_outgoing_index)
+		elif outgoing_label != null:
+			outgoing_label.modulate.a = 1.0 - clampf(_outgoing_elapsed_ms / LINE_FADE_MS, 0.0, 1.0)
+
 	if not _line_visible:
 		return
 	_line_elapsed_ms += delta_ms
+	var label := _label_for(_active_label_index)
 	if _line_elapsed_ms < LINE_FADE_IN_MS:
-		if _label != null:
-			_label.modulate.a = clampf(_line_elapsed_ms / LINE_FADE_IN_MS, 0.0, 1.0)
+		if label != null:
+			label.modulate.a = clampf(_line_elapsed_ms / LINE_FADE_IN_MS, 0.0, 1.0)
 		return
 	if not _line_is_final or _line_elapsed_ms < LINE_RELEASE_GATE_MS:
 		# Fully legible and waiting: either still inside its 1800 ms floor, or
 		# past it but holding for a successor that hasn't released yet — a
 		# line is a passive layer and never times itself out on a note clock.
-		if _label != null:
-			_label.modulate.a = 1.0
+		if label != null:
+			label.modulate.a = 1.0
 		return
 	# The last line has no successor to release it, so once its own floor is
 	# reached it fades itself out (§3.2 rule 4's degenerate case).
@@ -249,8 +293,8 @@ func _tick_narrative(delta_ms: float) -> void:
 	if fade_elapsed_ms >= LINE_FADE_MS:
 		_hide_current_line()
 		return
-	if _label != null:
-		_label.modulate.a = 1.0 - clampf(fade_elapsed_ms / LINE_FADE_MS, 0.0, 1.0)
+	if label != null:
+		label.modulate.a = 1.0 - clampf(fade_elapsed_ms / LINE_FADE_MS, 0.0, 1.0)
 
 
 func current_line_text() -> String:
