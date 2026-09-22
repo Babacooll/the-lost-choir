@@ -10,6 +10,13 @@ const RestorationEncounterScript := preload("res://scripts/encounters/restoratio
 const VerseBearerScene := preload("res://scenes/encounters/verse_bearer.tscn")
 const DoorScript := preload("res://scripts/levels/door.gd")
 
+## Color.a (modulate) is a 32-bit real_t; writing the double literal 0.30
+## into it and reading it back yields ~0.300000012, which is genuinely
+## greater than the 64-bit double literal 0.30 used in a bare comparison —
+## a float32/float64 round-trip artifact, not a real excess over the cap.
+## Anything past this margin is a real violation, not rounding noise.
+const LEGIBILITY_VIOLATION_MARGIN := 0.30 + 0.001
+
 var _player: CharacterBody2D
 var _encounter
 var _input
@@ -70,6 +77,35 @@ func _complete_current_attempt() -> void:
 func _fail_full_attempt(max_ticks: int = 240) -> void:
 	await _wait_until(func(): return _encounter.state == _encounter.State.SILENCE, max_ticks)
 	await _wait_until(func(): return _encounter.state == _encounter.State.OFFERING, max_ticks)
+
+
+## before_each's shared _encounter keeps its own tell cycling (open, miss at
+## 700 ms, 1400 ms silence, re-offer) independently of anything a test does
+## with a separately-instantiated encounter — and both register with the
+## same PlayerCombat. A test driving its own encounter(s) through exact note
+## counts must retire this one first, or an Answer press can occasionally
+## resolve the shared encounter's tell instead via §5 shared rule 6's
+## soonest-closing arbitration, corrupting the note/attempt count a mapping
+## assertion depends on (harmless for tests that only care about eventually
+## reaching a state, which is why this went unnoticed until a mapping test
+## needed exact counts).
+func _retire_shared_encounter() -> void:
+	_encounter.queue_free()
+	await get_tree().physics_frame
+
+
+## A successful Answer holds PlayerCombat.answer_state in ACTIVE_POSE for a
+## fixed 180 ms (ANSWER_ACTIVE_POSE_MS) before returning to IDLE — and only
+## IDLE reads a new press (_update_answer's AnswerState.IDLE branch is the
+## only one that checks _answer_buffer.just_pressed). A multi-encounter test
+## that presses again shortly after a prior encounter's final successful
+## Answer can land inside that 180 ms window and have the press silently
+## dropped — not mis-resolved, just never read — which then times out into
+## a real miss with no arbitration conflict to explain it. Sweep tests that
+## instantiate a fresh encounter per iteration and press again quickly must
+## wait this out first.
+func _wait_for_answer_idle() -> void:
+	await _wait_until(func(): return _player.combat.answer_state == _player.combat.AnswerState.IDLE, 30)
 
 
 func test_first_note_opens_immediately_with_700ms_lead() -> void:
@@ -225,7 +261,7 @@ func test_narrative_line_holds_full_legibility_for_1800ms_after_fade_in() -> voi
 	# early gate would show up here as a premature swap to line 2.
 	var min_alpha_after_fade_in := 2.0
 	var ticks := 0
-	while encounter._line_elapsed_ms < 1900.0 and ticks < 200:
+	while encounter._slot_elapsed_ms[encounter._active_label_index] < 1900.0 and ticks < 200:
 		min_alpha_after_fade_in = minf(min_alpha_after_fade_in, _visible_alpha(encounter._label))
 		if encounter._emitter.is_open():
 			await _press_answer()
@@ -240,13 +276,19 @@ func test_narrative_line_holds_full_legibility_for_1800ms_after_fade_in() -> voi
 		"line 1 must stay at full, on-screen opacity throughout its legibility floor, not just elapse in time")
 
 
-## §3.2 rule 4: a line clears over 300 ms when the next line begins, while the
-## incoming line fades in over its own 200 ms — a true crossfade, so combined
-## on-screen opacity across the two labels never drops toward 0 between two
-## consecutive lines on a clean run, unlike the pre-fix ~400 ms blank gap or a
-## same-frame hard cut (which this also catches, since a hidden label's alpha
-## does not count per _visible_alpha).
-func test_no_blank_interval_between_consecutive_narrative_lines() -> void:
+## §3.2 rule 4, Scope 3 (Game Designer's phasing ruling on this issue): the
+## overlap rule 4 sanctions is text over a *note*, not text over text — "a
+## line is never interrupted by the next one." The original two-label
+## crossfade started the outgoing label's clear only when the incoming one
+## released, which left both labels between roughly alpha 0.3-0.8 at once
+## for ~200 ms of every swap: two superimposed, near-unreadable sentences.
+## The fix decouples the outgoing's clear from the incoming's release (see
+## _slot_visible's comment in the script) so only one line is ever
+## meaningfully legible. This supersedes Scope 1's "combined alpha stays
+## near 1.0 across the swap" property — per the ruling's stated priority,
+## legibility wins over "no blank interval" at the handoff frame itself, so
+## a moment where both labels read near 0 is now expected, not a defect.
+func test_only_one_line_is_ever_meaningfully_legible_at_a_time() -> void:
 	var encounter = VerseBearerScene.instantiate()
 	add_child_autofree(encounter)
 	encounter.global_position = Vector2(100, 20)
@@ -265,41 +307,258 @@ func test_no_blank_interval_between_consecutive_narrative_lines() -> void:
 	if encounter._label == null or label_b == null:
 		return  # nothing further to check without both labels to observe
 
-	await _wait_until(func(): return encounter._emitter.is_open())
-	await _press_answer()
-	await _wait_until(func(): return encounter.narrative_lines_delivered() >= 1, 120)
-	assert_true(encounter._line_visible, "the first line should show at the first gap")
-
-	# Line 1's own 200 ms fade-in from 0 is expected and not the property
-	# under test — start tracking only once it has reached full opacity, so
-	# the measurement window covers just the swap to line 2.
-	await _wait_until(func(): return encounter._label.modulate.a >= 1.0, 30)
-
-	# Stopping as soon as narrative_lines_delivered() reaches 2 would miss the
-	# very frame the swap lands on — that flag flips synchronously inside the
-	# same release call that starts the crossfade, so an alpha dip a hard cut
-	# would produce only becomes observable on the *next* sample, one frame
-	# later. Keep sampling for a further 20 ticks (well past the 300 ms /
-	# ~18-frame fade-out) once the swap is seen, so the whole crossfade
-	# window is actually covered.
-	var min_combined_alpha := 2.0
+	# Drive a full clean run — all three line-to-line swaps (lines 1-4) —
+	# sampling both labels' rendered opacity every physics frame throughout,
+	# and record every frame where both cross the 0.30 legibility threshold
+	# at once. A violation is BOTH strictly above 0.30 (not BOTH at-or-above
+	# it) purely to absorb the real_t round-trip margin on the mechanism's
+	# own held-at-0 value — see LEGIBILITY_VIOLATION_MARGIN — not because
+	# sitting at exactly 0.30 is an accepted state; the dedicated test below
+	# pins that the held value is actually 0, not the threshold.
+	var violations := []
 	var ticks := 0
-	var post_swap_ticks := 0
-	while post_swap_ticks < 20 and ticks < 260:
-		var combined := _visible_alpha(encounter._label) + _visible_alpha(label_b)
-		min_combined_alpha = minf(min_combined_alpha, combined)
-		if encounter.narrative_lines_delivered() >= 2:
-			post_swap_ticks += 1
+	while encounter.narrative_lines_delivered() < 4 and ticks < 700:
+		var alpha_a: float = _visible_alpha(encounter._label)
+		var alpha_b: float = _visible_alpha(label_b)
+		if alpha_a > LEGIBILITY_VIOLATION_MARGIN and alpha_b > LEGIBILITY_VIOLATION_MARGIN:
+			violations.append("tick %d: label=%.3f label_b=%.3f" % [ticks, alpha_a, alpha_b])
 		if encounter._emitter.is_open():
 			await _press_answer()
 		else:
 			await get_tree().physics_frame
 		ticks += 1
 
-	assert_eq(encounter.narrative_lines_delivered(), 2,
-		"line 2 should have released by now on a clean run of continuous answers")
-	assert_gt(min_combined_alpha, 0.95,
-		"combined on-screen opacity across the two labels must stay effectively continuous across the swap")
+	assert_eq(encounter.narrative_lines_delivered(), 4,
+		"all four lines should have released by now on a clean run of continuous answers")
+	assert_eq(violations.size(), 0,
+		"both labels were >= 0.30 alpha at the same frame — two lines legible at once: %s" % [violations])
+
+
+## Game Designer's correction on top of the cap (Scope 3 remediation): the
+## incoming is held at exactly 0 while the outgoing is above threshold, not
+## at LEGIBILITY_THRESHOLD — 0.30 was written as a violation threshold, not
+## a safe value to render a held line at, and pinning it there either shows
+## through the outgoing's hold as a legible ghost, or (once the violation
+## check is strict-above-on-both-sides) legalizes an outgoing-just-above /
+## incoming-at-threshold frame that is itself unreadable. Pin this as its
+## own assertion, not just inferred from the mutual-exclusion test above, so
+## a future refactor back to a minf(raw, LEGIBILITY_THRESHOLD)-style cap is
+## caught directly rather than only showing up as a narrowly-missed
+## violation count.
+func test_incoming_is_held_at_zero_not_at_the_threshold_while_capped() -> void:
+	await _retire_shared_encounter()
+	var encounter = VerseBearerScene.instantiate()
+	add_child(encounter)
+	encounter.global_position = Vector2(100, 20)
+	encounter.set_player(_player)
+	await get_tree().physics_frame
+	await get_tree().physics_frame
+
+	var label_b = encounter.get("_label_b")
+	assert_not_null(encounter._label, "the scene-instantiated bearer must resolve a real NarrativeLayer/Label")
+	assert_not_null(label_b, "the scene-instantiated bearer must resolve a second crossfade label")
+	if encounter._label == null or label_b == null:
+		return  # nothing further to check without both labels to observe
+
+	# On the pure zero-jitter path the cap never actually engages (the
+	# outgoing's own floor-triggered clear already drops it below threshold
+	# before the incoming appears — the nominal-path case cycle 2 analyzed).
+	# A ~250 ms delay on the first answer (the same jitter magnitude the
+	# mutual-exclusion sweep test above uses to reproduce a real hold) is
+	# what makes the cap load-bearing here.
+	await _wait_for_answer_idle()
+	await _wait_until(func(): return encounter._emitter.is_open())
+	for i in range(15):  # ~250 ms
+		await get_tree().physics_frame
+	await _press_answer()
+
+	var observed_capped_frame := false
+	var ticks := 0
+	while encounter.narrative_lines_delivered() < 4 and ticks < 700:
+		var alpha_slot0: float = _visible_alpha(encounter._label)
+		var alpha_slot1: float = _visible_alpha(label_b)
+		var incoming_alpha: float = alpha_slot0 if encounter._active_label_index == 0 else alpha_slot1
+		var outgoing_alpha: float = alpha_slot1 if encounter._active_label_index == 0 else alpha_slot0
+		if outgoing_alpha > LEGIBILITY_VIOLATION_MARGIN:
+			observed_capped_frame = true
+			assert_eq(incoming_alpha, 0.0,
+				"the incoming label must be held at exactly 0 while the outgoing is above the legibility threshold, not at LEGIBILITY_THRESHOLD")
+		if encounter._emitter.is_open():
+			await _press_answer()
+		else:
+			await get_tree().physics_frame
+		ticks += 1
+
+	assert_true(observed_capped_frame,
+		"this test needs at least one frame where the cap was actually engaged to be a meaningful check")
+
+	encounter.queue_free()
+	await get_tree().physics_frame
+
+
+## Engineering Lead's remediation ruling (this issue, Scope 3): the original
+## phasing derived "only one line legible" from the timing margin between
+## the outgoing's floor and the incoming's release, and Engineering Reviewer
+## measured that margin as only ~3 frames on the zero-jitter path — consumed
+## 1:1 by ordinary reaction-time variation on the *first* note of a run
+## (unwarned, cold-start — not a contrived input), reproducing the exact
+## superimposition Game Designer ruled against for delays of roughly
+## 125-215 ms. test_only_one_line_is_ever_meaningfully_legible_at_a_time
+## above only ever drives the single best-case point on that curve (answers
+## the instant a note opens), which is exactly why it missed this. The fix
+## replaces the derived margin with a direct clamp (see LEGIBILITY_THRESHOLD
+## in the script), so the contract must hold at every point on the curve,
+## not just the nominal one — sweep the delay across and past Reviewer's
+## measured violating band.
+func test_only_one_line_legible_across_a_sweep_of_first_note_answer_delays() -> void:
+	await _retire_shared_encounter()
+	var delays_ms: Array = [0.0, 100.0, 133.0, 150.0, 167.0, 200.0, 233.0, 267.0]
+	var all_violations := []
+
+	for delay_ms in delays_ms:
+		var encounter = VerseBearerScene.instantiate()
+		add_child(encounter)
+		encounter.global_position = Vector2(100, 20)
+		encounter.set_player(_player)
+		await get_tree().physics_frame
+		await get_tree().physics_frame
+
+		var label_b = encounter.get("_label_b")
+		if encounter._label == null or label_b == null:
+			all_violations.append("delay=%dms: bearer did not resolve both crossfade labels" % delay_ms)
+			encounter.queue_free()
+			await get_tree().physics_frame
+			continue
+
+		await _wait_for_answer_idle()
+		await _wait_until(func(): return encounter._emitter.is_open())
+		# Delay only the run's first answer — every note after it is still
+		# answered the instant its window opens. The delay shifts when the
+		# first release-attempt happens without touching note onset timing
+		# (§7's "the 1100 ms spacing does not move" — unaffected either way).
+		var delay_ticks := int(round(delay_ms / (1000.0 / 60.0)))
+		for i in range(delay_ticks):
+			await get_tree().physics_frame
+		await _press_answer()
+
+		var ticks := 0
+		while encounter.narrative_lines_delivered() < 4 and ticks < 700:
+			var alpha_a: float = _visible_alpha(encounter._label)
+			var alpha_b: float = _visible_alpha(label_b)
+			if alpha_a > LEGIBILITY_VIOLATION_MARGIN and alpha_b > LEGIBILITY_VIOLATION_MARGIN:
+				all_violations.append("delay=%dms tick %d: label=%.3f label_b=%.3f" % [delay_ms, ticks, alpha_a, alpha_b])
+			if encounter._emitter.is_open():
+				await _press_answer()
+			else:
+				await get_tree().physics_frame
+			ticks += 1
+
+		if encounter.narrative_lines_delivered() != 4:
+			all_violations.append("delay=%dms: only %d of 4 lines released" % [delay_ms, encounter.narrative_lines_delivered()])
+
+		# Free explicitly (not add_child_autofree) so the next delay in the
+		# sweep starts with no other encounter's tell still open — several
+		# overlapping VerseBearer instances would let a single Answer press
+		# resolve the wrong one's note via PlayerCombat's cross-tell
+		# arbitration (§5 shared rule 6), corrupting the next iteration's
+		# timing.
+		encounter.queue_free()
+		await get_tree().physics_frame
+
+	assert_eq(all_violations.size(), 0,
+		"both labels were >= 0.30 alpha at the same frame for at least one first-note delay in the sweep: %s" % [all_violations])
+
+
+## Game Designer's ruling (Scope 3 remediation cycle 3): the counted release
+## cadence (every second gap-opening event, not a wall-clock gate) makes
+## rule 5's attempt->line mapping exact and unconditional — it no longer
+## depends on reaction time at all, only on which numbered gap a release
+## lands on. Re-run the same first-note-delay sweep as the mutual-exclusion
+## test above, but assert the mapping itself: every delay must reproduce
+## attempt 1 -> lines 1+2, attempt 2 -> lines 3+4, the 5-note restoring
+## phrase -> no new line, exactly — not just "no visual overlap."
+func test_rule5_mapping_holds_exactly_across_a_sweep_of_first_note_answer_delays() -> void:
+	await _retire_shared_encounter()
+	var delays_ms: Array = [0.0, 100.0, 150.0, 200.0, 250.0, 300.0, 400.0]
+	var failures := []
+	var expected := [[0, 3, 1], [1, 3, 3], [2, 4, 2], [3, 4, 4]]
+
+	for delay_ms in delays_ms:
+		var encounter = RestorationEncounterScript.new()
+		add_child(encounter)
+		encounter.global_position = Vector2(100, 20)
+		encounter.set_player(_player)
+		await get_tree().physics_frame
+		await get_tree().physics_frame
+
+		var mapping := []
+		encounter.line_shown.connect(
+			func(index, _text): mapping.append([index, encounter._phrase_length, encounter._note_index])
+		)
+
+		await _wait_for_answer_idle()
+		await _wait_until(func(): return encounter._emitter.is_open())
+		var delay_ticks := int(round(delay_ms / (1000.0 / 60.0)))
+		for i in range(delay_ticks):
+			await get_tree().physics_frame
+		await _press_answer()
+
+		# Answer everything else the instant it opens, through all three
+		# attempts (3 + 4 + 5 = 12 notes total, the first already answered
+		# above) to RESTORED.
+		var ticks := 0
+		while encounter.state != encounter.State.RESTORED and ticks < 900:
+			if encounter._emitter.is_open():
+				await _press_answer()
+			else:
+				await get_tree().physics_frame
+			ticks += 1
+
+		if encounter.state != encounter.State.RESTORED:
+			failures.append("delay=%dms: never reached RESTORED" % delay_ms)
+		elif mapping != expected:
+			failures.append("delay=%dms mapping=%s expected=%s" % [delay_ms, mapping, expected])
+
+		encounter.queue_free()
+		await get_tree().physics_frame
+
+	assert_eq(failures.size(), 0,
+		"rule 5's attempt->line mapping must hold exactly at every first-note delay in the sweep: %s" % [failures])
+
+
+## Game Designer: a miss is explicitly allowed to drift rule 5's mapping —
+## "rule 5 is a clean-run contract only." What must NOT happen is a crashed
+## gap counter or the same line index released twice. A miss is a gap in
+## its own right (rule 3), so it still advances the counted cadence exactly
+## like a resolved note.
+func test_a_miss_early_in_the_run_does_not_crash_the_counter_or_double_release() -> void:
+	var mapping := []
+	_encounter.line_shown.connect(func(index, _text): mapping.append(index))
+
+	# Let the very first note miss (never press Answer, letting its 700 ms
+	# lead elapse and the phrase restart after the 1400 ms silence), then
+	# answer everything else the instant it opens, through to RESTORED.
+	await _fail_full_attempt()
+	var ticks := 0
+	while _encounter.state != _encounter.State.RESTORED and ticks < 900:
+		if _encounter._emitter.is_open():
+			await _press_answer()
+		else:
+			await get_tree().physics_frame
+		ticks += 1
+
+	assert_eq(_encounter.state, _encounter.State.RESTORED,
+		"the encounter must still reach RESTORED after an early miss, not stall the counter")
+
+	var seen := {}
+	for idx in mapping:
+		assert_false(seen.has(idx), "line index %d was released more than once: %s" % [idx, mapping])
+		seen[idx] = true
+	for i in range(1, mapping.size()):
+		assert_true(mapping[i] > mapping[i - 1],
+			"line indices must arrive strictly increasing, never rewinding (rule 2): %s" % [mapping])
+	assert_true(mapping.size() <= _encounter.MAX_NARRATIVE_LINES,
+		"no more than %d lines should ever be released regardless of how the run degrades: %s" % [_encounter.MAX_NARRATIVE_LINES, mapping])
 
 
 func test_narrative_lines_match_the_approved_restoration_narrative() -> void:

@@ -149,6 +149,10 @@ func play_tell(emitter: TellEmitter) -> void:
 			base_lead_ms = KEENING_BASE_LEAD_MS
 			bus = BUS_VOICE  # wet — an offer, not an attack (contract §8)
 		_:
+			# An unrecognised register must be loud, not a silent no-op: a
+			# fully functional, fully damaging tell with no audible cue is
+			# the exact bug this guards against (MICH-614).
+			push_error("AudioDirector.play_tell: unhandled tell register '%s' — no stream mapped, tell will be silent" % emitter.register)
 			return
 
 	var player := AudioStreamPlayer.new()

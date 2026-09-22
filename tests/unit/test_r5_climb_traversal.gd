@@ -55,6 +55,16 @@ var _input
 func before_each() -> void:
 	_room = RoomScene.instantiate()
 	add_child_autofree(_room)
+	# MICH-615 wired R5's EnemyMarkers to real, live husks — this test is
+	# purely about the climb's platforming geometry (see the file header),
+	# and both husks' aggro ranges reach the entire lower half of the climb
+	# from room entry, so leaving them live here would have this test
+	# driving an unscripted fight instead of the platforming it exists to
+	# check. Combat reachability/survivability against these same husks has
+	# its own dedicated coverage (test_r5_encounter_reachability.gd).
+	for marker in get_tree().get_nodes_in_group("EnemyMarker"):
+		for child in marker.get_children():
+			child.queue_free()
 	_player = PlayerScene.instantiate()
 	add_child_autofree(_player)
 	_input = InputSender.new(Input)
