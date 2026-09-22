@@ -84,6 +84,7 @@ PLACEHOLDER = [
     ("verse_bearer", "Verse-bearer (R6)",     "ffe14a", "000000"),
     ("bell_frame",   "Bell-frame",            "b06fff", "000000"),
     ("membrane",     "Membrane",              "3cff7d", "000000"),
+    ("passive_husk", "Passive Husk (inert)",  "cfc0a4", "000000"),
     ("door_gated",   "Gated door",            "ff44ab", "000000"),
     ("door_open",    "Open door",             "05060a", "ff44ab"),
 ]
@@ -93,10 +94,19 @@ MUST_DIFFER = [
     ("player", "reed_husk"),
     ("player", "keening_husk"),
     ("reed_husk", "keening_husk"),
+    # The one confusion that must not survive: walking up to a live Reed
+    # expecting the inert husk, in the room that teaches Strike.
+    ("passive_husk", "reed_husk"),
+    ("passive_husk", "keening_husk"),
+    ("passive_husk", "player"),
     ("door_gated", "door_open"),
 ]
 DIFFER_MIN_RATIO = 1.5   # value separation between the two fills
 DIFFER_MIN_HUE = 40.0    # degrees, or achromatic-vs-chromatic
+# Saturation is the third axis, and the inert husk is the only class that uses
+# it: every live element is near-fully saturated, the player is achromatic, and
+# the inert husk sits alone in between. "Drained of colour" is the read.
+DIFFER_MIN_SAT = 0.50
 
 # --- the silhouette contract (criteria 6-8) -----------------------------------
 # Visual polygons in .tscn units: origin at the element's own anchor, y negative
@@ -114,6 +124,12 @@ SILHOUETTE = {
     # section 6 makes "no ears" a rejection criterion, and a protrusion at the
     # crown reads as an ear or a horn before it reads as anything else.
     "player": [(-9, 0), (-9, -40), (9, -40), (9, -30), (15, -30), (15, -20), (9, -20), (9, 0)],
+    # S6: husk-family wedge with the upper-right quarter torn away -- 140 px of
+    # a 540 px intact wedge, 26% gone. The break is the category ("already
+    # dead, safe to hit"); the proportion separates it from the live Reed as
+    # well, because the failure that matters is expecting the inert one and
+    # meeting a lunge. Collider stays 16x32 and is not touched.
+    "passive_husk": [(-12, 0), (-6, -30), (1, -30), (1, -10), (10, -10), (12, 0)],
     # One primitive, two proportions (S3). Both taper toward the aperture, so
     # the taper length IS the note length -- art doc section 7.2's "short
     # aperture = short note = short lead; long aperture = long note = long lead"
@@ -138,8 +154,11 @@ SILHOUETTE = {
 # Doors are exempt from S0: a door is architecture, it is rectangular because it
 # is an opening in a wall, and the two constructions in section 4 already carry
 # its state distinction structurally.
-ACTOR_CLASSES = ["player", "reed_husk", "keening_husk", "verse_bearer"]
+ACTOR_CLASSES = ["player", "reed_husk", "keening_husk", "passive_husk", "verse_bearer"]
 KIN_PAIR = {"reed_husk", "keening_husk"}   # S3: same primitive, must SHARE a fill ratio
+HUSK_FAMILY = {"reed_husk", "keening_husk", "passive_husk"}  # S2-exempt among themselves
+INERT_HUSK = "passive_husk"
+S6_MIN_BREAK = 0.08       # the inert husk's fill must sit this far BELOW its live kin
 S1_MIN_RATIO_SEP = 1.25   # pairwise bbox aspect-ratio separation
 S2_MIN_FILL_SEP = 0.12    # pairwise silhouette-area / bbox-area separation
 S3_MAX_KIN_FILL_SEP = 0.05  # the kin pair must not separate on fill
@@ -200,8 +219,8 @@ def silhouette_gate(verbose=True):
         for j in range(i + 1, len(ACTOR_CLASSES)):
             a, b = ACTOR_CLASSES[i], ACTOR_CLASSES[j]
             d = abs(m[a]["fill"] - m[b]["fill"])
-            if {a, b} == KIN_PAIR:
-                if d > S3_MAX_KIN_FILL_SEP:   # S3 is a floor from the other side
+            if {a, b} <= HUSK_FAMILY:
+                if {a, b} == KIN_PAIR and d > S3_MAX_KIN_FILL_SEP:
                     ok = False
                     if verbose:
                         print("S3 FAIL kin pair separates on fill by %.3f -- they must share it" % d)
@@ -209,6 +228,27 @@ def silhouette_gate(verbose=True):
                 ok = False
                 if verbose:
                     print("S2 FAIL %s/%s fill separation %.3f < %.2f" % (a, b, d, S2_MIN_FILL_SEP))
+    # S6: the inert husk is kin, and it is broken. It is exempt from S2 against
+    # its live kin (above) precisely because it is the same primitive -- so the
+    # break has to be measured directly, or "same primitive" silently licenses
+    # "indistinguishable". Its fill ratio must sit clearly BELOW both live husks.
+    live_kin = [m[k]["fill"] for k in KIN_PAIR]
+    break_sep = min(live_kin) - m[INERT_HUSK]["fill"]
+    if break_sep < S6_MIN_BREAK:
+        ok = False
+        if verbose:
+            print("S6 FAIL inert husk fill is only %.3f below its live kin (min %.2f) -- "
+                  "that is not a visible break" % (break_sep, S6_MIN_BREAK))
+    elif verbose:
+        print("S6 inert husk sits %.3f below its live kin's fill ratio -- a visible break"
+              % break_sep)
+    # The break must also BE a break: symmetric damage reads as a designed form.
+    if _mirror_symmetric(SILHOUETTE[INERT_HUSK]):
+        ok = False
+        if verbose:
+            print("S6 FAIL the inert husk's break is mirror-symmetric -- that reads as "
+                  "a shape somebody chose, not as damage")
+
     # S4: exactly one actor class is asymmetric, and it is the player. The two
     # interactables are asymmetric too, deliberately and by instruction from the
     # art direction (art doc 9.1 requires the membrane's sag off-centre because a
@@ -216,16 +256,25 @@ def silhouette_gate(verbose=True):
     # That does not weaken S4, whose job is that the player survives a value-only
     # and a colour-blind read against the other ACTORS -- nothing shares an
     # aspect-ratio band with a 64x10 horizontal strip.
-    asym = [k for k in ACTOR_CLASSES if not _mirror_symmetric(SILHOUETTE[k])]
+    # The inert husk is excluded, and it is not a fudge: S4 and S6 are in direct
+    # tension as written, and it was checked rather than assumed. The required
+    # break is 23-26% of the intact wedge; the only symmetric way to remove that
+    # from a wedge with a 12px top edge is a central cleft, and every width needs
+    # a cleft deeper than the wedge is tall or leaves prongs <= 2px that a 2px
+    # stroke consumes entirely. Damage is asymmetric, and a symmetric break reads
+    # as a designed form rather than as a wound -- which is S6's whole point.
+    # So S4 covers the INTACT actors, and S6 asserts the break separately, below.
+    intact = [k for k in ACTOR_CLASSES if k != INERT_HUSK]
+    asym = [k for k in intact if not _mirror_symmetric(SILHOUETTE[k])]
     if asym != ["player"]:
         ok = False
         if verbose:
-            print("S4 FAIL asymmetric actor classes are %s, expected exactly ['player']" % asym)
+            print("S4 FAIL asymmetric intact actors are %s, expected exactly ['player']" % asym)
     elif verbose:
         others = [k for k in SILHOUETTE if k not in ACTOR_CLASSES
                   and not _mirror_symmetric(SILHOUETTE[k])]
-        print("S4 player is the only asymmetric actor; asymmetric interactables "
-              "(art-directed): %s" % (others or "none"))
+        print("S4 player is the only asymmetric INTACT actor; asymmetric by art "
+              "direction elsewhere: %s" % (others + [INERT_HUSK]))
     for k in SILHOUETTE:
         if m[k]["fill"] > S0_MAX_FILL:
             ok = False
@@ -554,12 +603,14 @@ def main(argv):
                 ok &= g1 >= FLOOR and g2 >= FLOOR and g3 >= FLOOR
         print()
 
-    print("%-22s %-22s %10s %8s" % ("must be told apart", "", "value", "hue deg"))
+    print("%-16s %-16s %8s %8s %8s" % ("must be told apart", "", "value", "hue deg", "sat"))
     for a, b in MUST_DIFFER:
         r = ratio(rows[a], rows[b])
         hd = hue_delta(rows[a], rows[b])
-        passed = r >= DIFFER_MIN_RATIO or hd >= DIFFER_MIN_HUE
-        print("%-22s %-22s %10.2f %8.0f   %s" % (a, b, r, hd, "ok" if passed else "FAIL"))
+        sd = abs(hue_sat(rows[a])[1] - hue_sat(rows[b])[1])
+        passed = r >= DIFFER_MIN_RATIO or hd >= DIFFER_MIN_HUE or sd >= DIFFER_MIN_SAT
+        print("%-16s %-16s %8.2f %8.0f %8.2f   %s"
+              % (a, b, r, hd, sd, "ok" if passed else "FAIL"))
         if not table_only:
             ok &= passed
 

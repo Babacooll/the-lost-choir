@@ -94,10 +94,20 @@ Rules, all of them non-negotiable for the layer to pass its gate:
 | Verse-bearer (R6) | `#ffe14a` | `#000000` | 7.13:1 | 9.85:1 | 16.12:1 |
 | Bell-frame | `#b06fff` | `#000000` | 7.13:1 | 4.01:1 | 6.56:1 |
 | Membrane | `#3cff7d` | `#000000` | 7.13:1 | 9.65:1 | 15.79:1 |
+| Passive Husk (inert) | `#cfc0a4` | `#000000` | 7.13:1 | 7.17:1 | 11.73:1 |
 | Gated door | `#ff44ab` | `#000000` | 7.13:1 | 4.07:1 | 6.67:1 |
 | Open door | `#05060a` | `#ff44ab` | 6.87:1 | 4.07:1 | 6.43:1 |
 
 Lowest margin in the table is 3.84:1 — 28% clear of the floor, not 2.9.
+
+**The inert husk separates on saturation, and it is the only class that does.** Every live
+element is near-fully saturated, the player is achromatic, and `#cfc0a4` sits alone in
+between at 0.21 — "drained of colour" for the thing that is already dead. That matters
+because it is 34° from the live Reed Husk in hue, inside the 40° the gate normally wants:
+it clears on *value* (1.86:1) and on *saturation* (0.56 apart) instead. Saturation is now a
+third axis in the mutual-distinguishability check rather than an argument in prose, because
+the one confusion that must not survive is a player walking up to a live Reed expecting the
+inert one, in the room that teaches Strike.
 
 ## 4b. The silhouette contract — criteria 6–8
 
@@ -126,6 +136,7 @@ what the direction rules out cannot be inherited by accident.
 | **S3** | The two husks are exempt from S2 and must *share* a fill ratio — same primitive, different proportions | Reed + Keening |
 | **S4** | The player is the only asymmetric **actor** class | the four actors |
 | **S5** | All classes flattened to solid black on white must be tellable apart by a human | the contact sheet |
+| **S6** | The inert husk is kin, and it is broken: same wedge primitive, exempt from S2 against its live kin, but its fill ratio sits ≥ 0.08 *below* theirs and the break is not mirror-symmetric | passive husk |
 
 **Doors are exempt from S0.** A door is architecture; it is rectangular because it is an
 opening in a wall, and §4's two constructions already carry its state distinction
@@ -155,6 +166,7 @@ Visual polygons in `.tscn` units, origin at the element's own anchor, y negative
 | Player (the Listener) | 24 × 40 | 0.600 | 0.812 | upright wrapped column with a one-sided shoulder yoke — the only asymmetric thing on screen |
 | Reed Husk | 32 × 22 | 1.455 | 0.656 | squat wedge, wide rooted base, short taper |
 | Keening Husk | 18 × 48 | 0.375 | 0.667 | the same wedge drawn long — narrow, rooted, a long taper |
+| Passive Husk (inert) | 24 × 30 | 0.800 | 0.556 | the husk wedge with its upper-right quarter torn away |
 | Verse-bearer | 40 × 38 | 1.053 | 0.434 | flared mouth carried on two ribs, with real negative space beneath |
 | Bell-frame | 48 × 14 | 3.429 | 0.536 | tuned tubes of stepped length hanging mouth-down from a yoke |
 | Membrane | 64 × 10 | 6.400 | 0.700 | slack skin, sag off-centre |
@@ -163,6 +175,7 @@ Visual polygons in `.tscn` units, origin at the element's own anchor, y negative
 player        (-9,0) (-9,-40) (9,-40) (9,-30) (15,-30) (15,-20) (9,-20) (9,0)
 reed_husk     (-16,0) (-5,-22) (5,-22) (16,0)
 keening_husk  (-9,0) (-3,-48) (3,-48) (9,0)
+passive_husk  (-12,0) (-6,-30) (1,-30) (1,-10) (10,-10) (12,0)
 verse_bearer  (-20,0) (-20,-18) (-16,-18) (-8,-38) (8,-38) (16,-18) (20,-18) (20,0)
               (15,0) (15,-18) (-15,-18) (-15,0)
 bell_frame    (-24,-6) (24,-6) (24,-2) (20,-2) (20,2) (12,2) (12,-2) (4,-2) (4,5)
@@ -179,6 +192,29 @@ rule the audio does. Both keep the chamber low and the base rooted, per §7.2's 
 frame members fuse into a base that meets the floor as one mass". They separate on S1 alone
 (3.88×) and share a fill ratio to within 0.010, which is S3's both-halves: visibly kin
 *because* the primitive is identical, separately recognisable *because* the proportion is not.
+
+**The inert husk is the husk wedge with a quarter torn off.** It joins the family rather
+than inventing a third language — same trapezoid, kin-exempt from S2 — and what marks it is
+topology: 140 px gone from a 540 px intact wedge, 26%. That is a categorical read ("already
+dead, safe to hit") rather than a measured one. It *also* separates from the live Reed on
+proportion, at 1.82×, because the failure that matters is not mistaking a corpse for a
+threat but the reverse: expecting the inert one and meeting a lunge, in R2, which is where
+Strike is taught and where both stand on screen together (markers at x=160 and x=600).
+
+**S4 and S6 are in direct tension, and S6 wins.** S4 says the player is the only asymmetric
+thing; S6 requires a visibly missing chunk, and damage is asymmetric by nature. I checked
+whether a symmetric break is expressible before deciding it isn't: the required removal is
+23–26% of the intact wedge, the only symmetric way to take that from a wedge with a 12 px
+top edge is a central cleft, and every cleft width needs either more depth than the wedge
+has height or leaves prongs ≤ 2 px that a 2 px stroke consumes whole. A symmetric break also
+reads as a form somebody chose rather than as a wound, which defeats the rule's purpose. So
+S4 now covers the **intact** actors and the gate asserts the break separately — including
+that it must *not* be mirror-symmetric.
+
+The tear is a single clean right angle rather than a ragged staircase. A ragged edge reads
+as damage better, and it does fit the fill window, but every candidate either uses steps
+smaller than the 2 px contour — which merges them — or eats the top edge down to a prong
+the stroke swallows. At this scale a clean tear is what the construction supports.
 
 **The player's asymmetry is a shoulder yoke, not a head protrusion.** Art doc §6 makes "no
 ears" an explicit rejection criterion at the critic gate, and a protrusion at the crown reads
@@ -270,8 +306,14 @@ For whoever builds this — it is engine integration, not asset production.
   against this one.
 - `tools/art/warmth_check.py` must still pass with the layer **off**. It is expected to
   fail with the layer on; that is not a regression, it is two different scenes.
-- Elements to cover: player, Reed Husk, Keening Husk, Verse-bearer, bell-frame, membrane,
-  gated door, open door. Nothing else. Terrain and backdrop keep the derive.
+- Elements to cover: player, Reed Husk, Keening Husk, **Passive Husk**, Verse-bearer,
+  bell-frame, membrane, gated door, open door. Nothing else. Terrain and backdrop keep the
+  derive.
+- `scenes/enemies/passive_husk.tscn` arrived from MICH-615 after this layer was built and
+  has no role, so `apply()` is never called on it. Attaching `legibility_role.gd` with
+  `role = "passive_husk"` is the only mechanism that covers it — there is no fallback, and
+  an uncovered actor renders at its authored colour, which for this one is `#8c523d` at
+  2.10:1 and 2.08:1. That is numerically the failure this whole item was opened to fix.
 - **`Door._refresh_visual()` sets `visual.modulate.a = 0.55` on a gated door.** That dim
   predates this layer and must survive its deletion, but it cannot apply while the layer
   is on: it multiplies into both the fill and the contour and drops the gated door to
@@ -317,7 +359,8 @@ This layer is done when `assets/art/` has real sprites. Deleting it is:
 2. remove `tools/art/legibility_check.py`;
 3. remove this file, and the contact sheet if one was committed;
 4. restore the original fills and alphas listed in §1, and the original rectangular
-   visual polygons the actors had before §4b;
+   visual polygons the actors had before §4b (the Passive Husk's was `#8c523d` with
+   `(-8,-32) (8,-32) (8,0) (-8,0)`);
 5. restore `Door._refresh_visual()`'s gated dim by deleting its early return;
 6. confirm `tools/art/warmth_check.py` still passes.
 
