@@ -55,16 +55,6 @@ var _input
 func before_each() -> void:
 	_room = RoomScene.instantiate()
 	add_child_autofree(_room)
-	# MICH-615 wired R5's EnemyMarkers to real, live husks — this test is
-	# purely about the climb's platforming geometry (see the file header),
-	# and both husks' aggro ranges reach the entire lower half of the climb
-	# from room entry, so leaving them live here would have this test
-	# driving an unscripted fight instead of the platforming it exists to
-	# check. Combat reachability/survivability against these same husks has
-	# its own dedicated coverage (test_r5_encounter_reachability.gd).
-	for marker in get_tree().get_nodes_in_group("EnemyMarker"):
-		for child in marker.get_children():
-			child.queue_free()
 	_player = PlayerScene.instantiate()
 	add_child_autofree(_player)
 	_input = InputSender.new(Input)
@@ -81,6 +71,44 @@ func before_each() -> void:
 func after_each() -> void:
 	_input.release_all()
 	_input = null
+
+
+## MICH-615 wired R5's EnemyMarkers to real, live husks. This test is
+## primarily about the climb's platforming geometry (see the file header),
+## and neither husk currently reaches the player unprompted from where the
+## climb naturally puts them (MICH-617 re-placed both off the entry point
+## and off the floor entirely — docs/design/vertical-slice.md §6's P1/P2/P3),
+## so most of the climb can run with them neutralized to isolate pure
+## platforming. Combat reachability/survivability against these same husks
+## has its own dedicated coverage (test_r5_encounter_reachability.gd), and
+## test_full_r5_climb_reaches_the_exit_door_with_both_husks_live below covers
+## the same door-to-door traversal WITHOUT neutralizing them.
+func _neutralize_husks() -> void:
+	for marker in get_tree().get_nodes_in_group("EnemyMarker"):
+		for child in marker.get_children():
+			child.queue_free()
+	await get_tree().physics_frame
+
+
+## Whether any live enemy currently has an open tell — used to answer
+## whichever husk's tell opens during the live-husk climb, wherever in the
+## climb that happens (Reed on rung1, Keening from ledge3/rung4 upward).
+## A no-op (returns false) once EnemyMarker children are neutralized, so
+## injecting a call to this into the shared climb helpers below doesn't
+## change the neutralized-husk test's behaviour at all.
+func _has_open_tell() -> bool:
+	for enemy in get_tree().get_nodes_in_group("enemy"):
+		if is_instance_valid(enemy) and "state" in enemy and enemy.state == EnemyBase.State.TELLING:
+			return true
+	return false
+
+
+func _maybe_answer_tell() -> void:
+	if not _has_open_tell():
+		return
+	_input.action_down(&"answer")
+	await get_tree().physics_frame
+	_input.action_up(&"answer")
 
 
 func _release_horizontal() -> void:
@@ -147,6 +175,7 @@ func _attempt_climb(to: Dictionary, launch_x: float, dir_sign: float, max_ticks:
 				continue
 
 		await get_tree().physics_frame
+		await _maybe_answer_tell()
 
 		if jumped and _player.is_on_floor():
 			var landed_on_target: bool = (
@@ -202,23 +231,12 @@ func _climb_to(frm: Dictionary, to: Dictionary, max_ticks: int = 220) -> bool:
 	return false
 
 
-func test_full_r5_climb_reaches_the_exit_door_floor_to_door() -> void:
-	for i in range(CLIMB_PLATFORMS.size() - 1):
-		var frm: Dictionary = CLIMB_PLATFORMS[i]
-		var to: Dictionary = CLIMB_PLATFORMS[i + 1]
-		var reached := await _climb_to(frm, to)
-		assert_true(
-			reached,
-			"driven climb failed on hop %d->%d: never landed standing on the platform at top=%d within budget" % [i, i + 1, to["top"]]
-		)
-		if not reached:
-			return
-
-	# Final push from the top ledge into the exit door itself. The door
-	# (16px) is narrower than the player (18px), so there is no interior
-	# span to be "inside" — sweep launch points across ledge4's own span
-	# the same way, and success is overlapping its trigger rather than
-	# landing.
+## Final push from the top ledge into the exit door itself. The door (16px)
+## is narrower than the player (18px), so there is no interior span to be
+## "inside" — sweep launch points across ledge4's own span the same way the
+## climb hops do, and success is overlapping its trigger rather than
+## landing. Shared by both the neutralized-husk and live-husk climb tests.
+func _reach_exit_door_from_ledge4() -> bool:
 	var ledge4: Dictionary = CLIMB_PLATFORMS[CLIMB_PLATFORMS.size() - 1]
 	var door_center_x: float = EXIT_DOOR_RECT.position.x + EXIT_DOOR_RECT.size.x * 0.5
 	var reset_pos: Vector2 = _player.global_position
@@ -255,6 +273,7 @@ func test_full_r5_climb_reaches_the_exit_door_floor_to_door() -> void:
 					continue
 
 			await get_tree().physics_frame
+			await _maybe_answer_tell()
 			if _player_overlaps_rect(EXIT_DOOR_RECT):
 				reached_door = true
 				break
@@ -262,4 +281,100 @@ func test_full_r5_climb_reaches_the_exit_door_floor_to_door() -> void:
 		if reached_door:
 			break
 
+	return reached_door
+
+
+## Walks to Reed Husk's own resting x on rung1 (it does not jump, so it can
+## only close horizontally along its own platform) and holds there so it can
+## close the remaining distance on foot and lunge, answering its tell via
+## the shared _maybe_answer_tell() hook the instant it opens.
+func _engage_reed_on_rung1(reed: Node) -> bool:
+	var rung1: Dictionary = CLIMB_PLATFORMS[1]
+	var target_x: float = clampf(
+		reed.global_position.x, rung1["x0"] + PLAYER_HALF_WIDTH, rung1["x1"] - PLAYER_HALF_WIDTH
+	)
+	for i in range(300):
+		_hold_toward(target_x)
+		await get_tree().physics_frame
+		if reed.state == EnemyBase.State.TELLING:
+			await _maybe_answer_tell()
+			_release_horizontal()
+			return true
+	_release_horizontal()
+	return false
+
+
+func test_full_r5_climb_reaches_the_exit_door_floor_to_door() -> void:
+	await _neutralize_husks()
+
+	for i in range(CLIMB_PLATFORMS.size() - 1):
+		var frm: Dictionary = CLIMB_PLATFORMS[i]
+		var to: Dictionary = CLIMB_PLATFORMS[i + 1]
+		var reached := await _climb_to(frm, to)
+		assert_true(
+			reached,
+			"driven climb failed on hop %d->%d: never landed standing on the platform at top=%d within budget" % [i, i + 1, to["top"]]
+		)
+		if not reached:
+			return
+
+	var reached_door := await _reach_exit_door_from_ledge4()
 	assert_true(reached_door, "driven climb reached the top ledge but never overlapped the R5_to_R6 door trigger")
+
+
+## AC4: the same door-to-door climb, but WITHOUT neutralizing either husk —
+## both stay live and are dealt with using the real Answer verb wherever
+## their tells actually open, exactly as a real playthrough would need to.
+## Reed Husk (rung1, P3) only opens its tell once the player stands beside
+## it, since its lunge reach is 40px and it cannot jump up to chase — so
+## this parks there deliberately after the first hop. Keening Husk (the new
+## high perch, P2) is stationary and ranged with attack range == aggro
+## range, so its tell opens passively the moment the climb brings the player
+## within 380px (from ledge3/rung3 upward) and the shared _maybe_answer_tell()
+## hook already wired into _attempt_climb/_reach_exit_door_from_ledge4
+## catches it wherever that happens, including possible re-opens from
+## repeat-compression while lingering near the top.
+func test_full_r5_climb_reaches_the_exit_door_with_both_husks_live() -> void:
+	var reed := _find_enemy("ReedHusk")
+	var keening := _find_enemy("KeeningHusk")
+	assert_not_null(reed, "R5's ReedHusk marker must have spawned a real instance")
+	assert_not_null(keening, "R5's KeeningHusk marker must have spawned a real instance")
+
+	for i in range(CLIMB_PLATFORMS.size() - 1):
+		var frm: Dictionary = CLIMB_PLATFORMS[i]
+		var to: Dictionary = CLIMB_PLATFORMS[i + 1]
+		var reached := await _climb_to(frm, to)
+		assert_true(
+			reached,
+			"live-husk climb failed on hop %d->%d: never landed standing on the platform at top=%d within budget" % [i, i + 1, to["top"]]
+		)
+		if not reached:
+			return
+
+		if i == 0:
+			# Just landed on rung1 — Reed Husk holds this spot (P3); engage
+			# it here before continuing the climb.
+			var engaged := await _engage_reed_on_rung1(reed)
+			assert_true(engaged, "Reed Husk on rung1 never closed to lunge range and opened its tell")
+			assert_eq(
+				_player.combat.last_answer_result, "success", "Reed Husk's tell on rung1 must be answerable"
+			)
+
+	var reached_door := await _reach_exit_door_from_ledge4()
+	assert_true(
+		reached_door,
+		"live-husk climb reached the top ledge but never overlapped the R5_to_R6 door trigger"
+	)
+
+	assert_true(is_instance_valid(reed), "Reed Husk must still be alive at the end of a live-husk door-to-door climb")
+	assert_true(
+		is_instance_valid(keening), "Keening Husk must still be alive at the end of a live-husk door-to-door climb"
+	)
+
+
+func _find_enemy(script_class_name: String) -> Node:
+	for marker in get_tree().get_nodes_in_group("EnemyMarker"):
+		for child in marker.get_children():
+			if child.get_script() != null and child.get_script().get_global_name() == script_class_name:
+				return child
+	return null

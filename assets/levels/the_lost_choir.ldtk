@@ -574,8 +574,8 @@
             {
               "__identifier": "EnemyMarker",
               "px": [
-                190,
-                412
+                345,
+                462
               ],
               "width": 16,
               "height": 16,
@@ -605,21 +605,6 @@
               "width": 80,
               "height": 16,
               "fieldInstances": []
-            },
-            {
-              "__identifier": "EnemyMarker",
-              "px": [
-                53,
-                312
-              ],
-              "width": 16,
-              "height": 16,
-              "fieldInstances": [
-                {
-                  "__identifier": "enemy_type",
-                  "__value": "KeeningHusk"
-                }
-              ]
             },
             {
               "__identifier": "SolidRect",
@@ -660,6 +645,31 @@
               "width": 80,
               "height": 16,
               "fieldInstances": []
+            },
+            {
+              "__identifier": "SolidRect",
+              "px": [
+                372,
+                48
+              ],
+              "width": 80,
+              "height": 16,
+              "fieldInstances": []
+            },
+            {
+              "__identifier": "EnemyMarker",
+              "px": [
+                412,
+                32
+              ],
+              "width": 16,
+              "height": 16,
+              "fieldInstances": [
+                {
+                  "__identifier": "enemy_type",
+                  "__value": "KeeningHusk"
+                }
+              ]
             },
             {
               "__identifier": "Door",

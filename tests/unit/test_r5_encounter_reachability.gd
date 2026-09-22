@@ -2,11 +2,19 @@ extends GutTest
 ## MICH-615 §3: drives the real R2/R5 Room scenes with the now-live husks to
 ## confirm the four authored encounters are actually reachable and
 ## survivable, not just correctly positioned (test_enemy_spawning.gd already
-## covers positions/instantiation). R5's two husks both have aggro ranges
-## that reach the room's entry point (see the finding in this checkpoint's
-## handback), so unlike test_r5_climb_traversal.gd (pure platforming,
-## enemies neutralized there on purpose) this test drives combat instead of
-## a climb.
+## covers positions/instantiation). Unlike test_r5_climb_traversal.gd (pure
+## platforming, enemies neutralized there on purpose) this test drives
+## combat instead of a climb.
+##
+## MICH-617 re-placed both R5 husks off the entry point (docs/design/
+## vertical-slice.md §6's P1/P2/P3 contract — see the LDtk file and
+## test_r5_climb_traversal.gd's CLIMB_PLATFORMS for the geometry): Reed Husk
+## now holds rung1 (the foot of the climb) and Keening Husk perches on a new
+## high ledge at the top of the room, so neither is in range of a player who
+## has just walked in. The old "opens at entry" test asserted the defect
+## this fixed; it is replaced below by an explicit "stays IDLE at entry"
+## check for each husk, plus a reachability check positioned where each
+## husk's aggro/lunge range actually is.
 
 const R2Scene := preload("res://scenes/levels/R2_ReedGallery.tscn")
 const R5Scene := preload("res://scenes/levels/R5_Colonnade.tscn")
@@ -81,7 +89,11 @@ func test_r2_far_reed_husk_is_reachable_and_answerable() -> void:
 	assert_eq(_player.hp, start_hp, "a successful Answer must not damage the player")
 
 
-func test_r5_keening_husk_tell_opens_at_entry_and_is_answerable() -> void:
+## P1: at the R5_to_R4 entry door, before any input, neither husk may be
+## within its own aggro range (with a >=48px margin). 90 ticks at the
+## physics tick rate (60 Hz) is 1.5s of continuous non-aggro, comfortably
+## past the 1s the design contract asks for.
+func test_r5_keening_husk_stays_idle_at_r5_entry() -> void:
 	_room = R5Scene.instantiate()
 	add_child_autofree(_room)
 	_player = PlayerScene.instantiate()
@@ -93,20 +105,15 @@ func test_r5_keening_husk_tell_opens_at_entry_and_is_answerable() -> void:
 	var keening = _find_enemy("KeeningHusk")
 	assert_not_null(keening, "R5's KeeningHusk marker must have spawned a real instance")
 
-	var reached_telling := await _wait_until(func(): return keening.state == keening.State.TELLING, 300)
-	assert_true(
-		reached_telling,
-		"the Keening Husk's 380px aggro range must reach the player at R5's own entry point without any extra travel"
-	)
+	var margin: float = _player.global_position.distance_to(keening.global_position) - keening.aggro_range_px()
+	assert_gt(margin, 48.0, "the Keening Husk must clear R5's entry point by >=48px margin (got %.1f)" % margin)
 
-	var start_hp: int = _player.hp
-	await _press_answer()
-	await get_tree().physics_frame
-	assert_eq(_player.combat.last_answer_result, "success", "the Keening Husk's tell must be answerable from entry")
-	assert_eq(_player.hp, start_hp, "a successful Answer must not damage the player")
+	var reached_telling := await _wait_until(func(): return keening.state == keening.State.TELLING, 90)
+	assert_false(reached_telling, "the Keening Husk must stay IDLE at R5's entry point (P1)")
+	assert_eq(keening.state, keening.State.IDLE, "the Keening Husk must remain IDLE, not just non-TELLING, at entry")
 
 
-func test_r5_reed_husk_eventually_closes_and_is_answerable() -> void:
+func test_r5_reed_husk_stays_idle_at_r5_entry() -> void:
 	_room = R5Scene.instantiate()
 	add_child_autofree(_room)
 	_player = PlayerScene.instantiate()
@@ -118,13 +125,66 @@ func test_r5_reed_husk_eventually_closes_and_is_answerable() -> void:
 	var reed = _find_enemy("ReedHusk")
 	assert_not_null(reed, "R5's ReedHusk marker must have spawned a real instance")
 
-	# No player input needed — the husk itself is what has to close distance
-	# and reach lunge range from wherever it settles.
-	var reached_telling := await _wait_until(func(): return reed.state == reed.State.TELLING, 600)
-	assert_true(reached_telling, "the Reed Husk must eventually close to lunge range and open its tell")
+	var margin: float = _player.global_position.distance_to(reed.global_position) - reed.aggro_range_px()
+	assert_gt(margin, 48.0, "the Reed Husk must clear R5's entry point by >=48px margin (got %.1f)" % margin)
+
+	var reached_telling := await _wait_until(func(): return reed.state == reed.State.TELLING, 90)
+	assert_false(reached_telling, "the Reed Husk must stay IDLE at R5's entry point (P1)")
+	assert_eq(reed.state, reed.State.IDLE, "the Reed Husk must remain IDLE, not just non-TELLING, at entry")
+
+
+## P3: Reed Husk holds the foot of the climb (rung1). Parking the player
+## right beside its resting spot lets it close the remaining few px on foot
+## and lunge, the same way test_r5_climb_traversal.gd's live-husk climb
+## engages it before continuing upward.
+func test_r5_reed_husk_is_reachable_and_answerable_on_rung1() -> void:
+	_room = R5Scene.instantiate()
+	add_child_autofree(_room)
+	_player = PlayerScene.instantiate()
+	add_child_autofree(_player)
+	_input = InputSender.new(Input)
+	await get_tree().physics_frame
+
+	var reed = _find_enemy("ReedHusk")
+	assert_not_null(reed, "R5's ReedHusk marker must have spawned a real instance")
+	# rung1 (x0=273, x1=353, top=478) — stand a few px from Reed's own resting
+	# spot (345, 478), still well inside both its aggro (220) and, once it
+	# closes the gap, its lunge range (40).
+	_player.global_position = Vector2(300.0, 478.0)
+	await get_tree().physics_frame
+
+	var reached_telling := await _wait_until(func(): return reed.state == reed.State.TELLING, 300)
+	assert_true(reached_telling, "the Reed Husk must close to lunge range and open its tell on rung1")
 
 	var start_hp: int = _player.hp
 	await _press_answer()
 	await get_tree().physics_frame
 	assert_eq(_player.combat.last_answer_result, "success", "R5's Reed Husk tell must be answerable")
+	assert_eq(_player.hp, start_hp, "a successful Answer must not damage the player")
+
+
+## P2: Keening Husk's register belongs to the top of the climb. Its 380px
+## aggro reaches down as far as ledge3/rung3 but never the floor — stand on
+## ledge3 (x0=184, x1=264, top=228), which the climb passes through, and
+## confirm the stationary, ranged Keening Husk notices from there.
+func test_r5_keening_husk_is_reachable_and_answerable_from_the_upper_climb() -> void:
+	_room = R5Scene.instantiate()
+	add_child_autofree(_room)
+	_player = PlayerScene.instantiate()
+	add_child_autofree(_player)
+	_input = InputSender.new(Input)
+	await get_tree().physics_frame
+
+	var keening = _find_enemy("KeeningHusk")
+	assert_not_null(keening, "R5's KeeningHusk marker must have spawned a real instance")
+	_player.global_position = Vector2(224.0, 228.0)
+	await get_tree().physics_frame
+
+	var reached_telling := await _wait_until(func(): return keening.state == keening.State.TELLING, 300)
+	assert_true(reached_telling, "the Keening Husk must notice the player from ledge3, on the upper climb")
+
+	var start_hp: int = _player.hp
+	await _press_answer()
+	await get_tree().physics_frame
+	assert_eq(_player.combat.last_answer_result, "success", "R5's Keening Husk tell must be answerable")
 	assert_eq(_player.hp, start_hp, "a successful Answer must not damage the player")
