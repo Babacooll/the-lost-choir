@@ -40,7 +40,7 @@ const CLIMB_PLATFORMS := [
 	{"x0": 124.0, "x1": 204.0, "top": 278.0},  # rung3
 	{"x0": 184.0, "x1": 264.0, "top": 228.0},  # ledge3
 	{"x0": 263.0, "x1": 343.0, "top": 178.0},  # rung4
-	{"x0": 139.0, "x1": 219.0, "top": 128.0},  # ledge4
+	{"x0": 139.0, "x1": 239.0, "top": 128.0},  # ledge4 — widened for MICH-617's Keening Husk re-placement
 ]
 const EXIT_DOOR_RECT := Rect2(171.0, 36.0, 16.0, 56.0)
 
